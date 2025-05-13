@@ -4,13 +4,16 @@ import { DateOrNull } from "../../types/common.types";
 import { toIsoDateFormat } from "../date";
 import { LocaleKnownScript } from "../knownscript";
 import { SPServerLocalTimeToUTCSync } from "./web";
+import { hasGlobalContext } from "./common";
 
 function _SPServerLocalTimeToUTC(dateValueStr: string) {
-    //yyyy-MM-ddTHH:mm or SPServerLocalTime (5/27/2021 11:34) to UTC
-    let utcTimeValue = SPServerLocalTimeToUTCSync(_spPageContextInfo.webServerRelativeUrl, dateValueStr);
+    if (hasGlobalContext()) {
+        //yyyy-MM-ddTHH:mm or SPServerLocalTime (5/27/2021 11:34) to UTC
+        let utcTimeValue = SPServerLocalTimeToUTCSync(_spPageContextInfo.webServerRelativeUrl, dateValueStr);
 
-    if (!isNullOrEmptyString(utcTimeValue)) {
-        return new Date(utcTimeValue);
+        if (!isNullOrEmptyString(utcTimeValue)) {
+            return new Date(utcTimeValue);
+        }
     }
     return null;
 }
