@@ -26,14 +26,16 @@ export function hasGlobalContext() {
 export function GetFileSiteUrl(fileUrl: string): string {
     let siteUrl: string;
     let urlParts = fileUrl.split('/');
-    if (urlParts[urlParts.length - 1].indexOf('.') > 0)//file name
-        urlParts.pop();//file name
 
     let key = "GetSiteUrl|" + urlParts.join("/").toLowerCase();
     siteUrl = getCacheItem<string>(key);
     if (isNullOrUndefined(siteUrl)) {
-        while (!isValidGuid(GetWebIdSync(urlParts.join('/'))))
+        while (!isValidGuid(GetWebIdSync(urlParts.join('/')))) {
             urlParts.pop();
+            if (urlParts.length === 0) {
+                return '';
+            }
+        }
 
         siteUrl = normalizeUrl(urlParts.join('/'));
         setCacheItem(key, siteUrl, mediumLocalCache.localStorageExpiration);//keep for 15 minutes
