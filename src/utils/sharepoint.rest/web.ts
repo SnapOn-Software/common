@@ -294,6 +294,7 @@ export function GetContentTypesSync(siteUrl: string, options: IGetContentTypesOp
 interface IGetListsOptions {
     includeRootFolders?: boolean;
     includeViews?: boolean;
+    allowCache?: boolean;
 }
 
 function _getListsRequestUrl(siteUrl: string, options: IGetListsOptions) {
@@ -336,8 +337,8 @@ function _postProcessGetLists(lists: iList[], options: Omit<IGetListsOptions, "i
 
 export function GetLists(siteUrl: string, options: IGetListsOptions = {}): Promise<iList[]> {
     let url = _getListsRequestUrl(siteUrl, options);
-
-    return GetJson<{ value: iList[]; }>(url, null, { allowCache: true, jsonMetadata: jsonTypes.nometadata })
+    const allowCache = options.allowCache === undefined ? true : options.allowCache;
+    return GetJson<{ value: iList[]; }>(url, null, { allowCache, jsonMetadata: jsonTypes.nometadata })
         .then(result => {
             return _postProcessGetLists(result.value, options);
         })
