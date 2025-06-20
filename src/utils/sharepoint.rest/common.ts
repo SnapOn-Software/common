@@ -7,7 +7,7 @@ import { FieldTypeAsString, IFieldInfoEX, IFieldTaxonomyInfo } from "../../types
 import { ISPRestError } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
-import { mediumLocalCache } from "../rest";
+import { GetJsonSync, longLocalCache, mediumLocalCache } from "../rest";
 import { GetWebIdSync, GetWebInfoSync } from "./web";
 
 const logger = ConsoleLogger.get("sharepoint.rest/common");
@@ -26,15 +26,18 @@ export function hasGlobalContext() {
 export function GetFileSiteUrl(fileUrl: string): string {
     let siteUrl: string;
     let urlParts = fileUrl.split('/');
-    if (urlParts[urlParts.length - 1].indexOf('.') > 0)//file name
-        urlParts.pop();//file name
 
-    let key = "GetSiteUrl|" + urlParts.join("/").toLowerCase();
+    let key = "GetSiteUrl|" + fileUrl.toLowerCase();
     siteUrl = getCacheItem<string>(key);
     if (isNullOrUndefined(siteUrl)) {
-        while (!isValidGuid(GetWebIdSync(urlParts.join('/'))))
+        while (urlParts.length > 0) {
+            const candidateUrl = makeServerRelativeUrl(normalizeUrl(urlParts.join("/"), true))
+            const syncResult = GetJsonSync<{ d: { Id: string; }; }>(`${candidateUrl}_api/web/Id`, null, { ...longLocalCache });
+            if (syncResult.success && isValidGuid(syncResult.result.d.Id)) {
+                break
+            }
             urlParts.pop();
-
+        }
         siteUrl = normalizeUrl(urlParts.join('/'));
         setCacheItem(key, siteUrl, mediumLocalCache.localStorageExpiration);//keep for 15 minutes
     }
@@ -46,8 +49,16 @@ export function GetFileSiteUrl(fileUrl: string): string {
  * If you send a guid - it will look for a site with that ID in the current context site collection
  */
 export function GetSiteUrl(siteUrlOrId?: string): string {
-    let siteUrl: string;
-    if (isNullOrUndefined(siteUrlOrId)) {
+    if (!isNullOrUndefined(siteUrlOrId) && isValidGuid(siteUrlOrId)) {
+        const webInfo = GetWebInfoSync(null, siteUrlOrId);
+        return makeServerRelativeUrl(normalizeUrl(webInfo.ServerRelativeUrl, true));
+    }
+    return GetSiteUrlLocally(siteUrlOrId);
+}
+
+/** gets a siteUrl locally (without making requests) (todo although currently GetFileSiteUrl does make requests...) */
+export function GetSiteUrlLocally(siteUrl?: string): string {
+    if (isNullOrUndefined(siteUrl)) {
         if (hasGlobalContext()) {
             siteUrl = _spPageContextInfo.webServerRelativeUrl;
             if (_spPageContextInfo.isAppWeb)//#1300 if in a classic app sub-site
@@ -57,20 +68,13 @@ export function GetSiteUrl(siteUrlOrId?: string): string {
             siteUrl = GetFileSiteUrl(window.location.pathname);
         }
     }
-    else if (isValidGuid(siteUrlOrId)) {
-        //GetWebInfoSync calls GetSiteUrl recursively, but with null should not get in here
-        let webInfo = GetWebInfoSync(null, siteUrlOrId);
-        siteUrl = webInfo.ServerRelativeUrl;
-    }
-    else siteUrl = siteUrlOrId;
-
     //must end with / otherwise root sites will return "" and we will think there is no site url.
     return makeServerRelativeUrl(normalizeUrl(siteUrl, true));
 }
 
 /** gets a site url, returns its REST _api url */
 export function GetRestBaseUrl(siteUrl: string): string {
-    siteUrl = GetSiteUrl(siteUrl);
+    siteUrl = GetSiteUrlLocally(siteUrl);
     return siteUrl + '_api';
 }
 
