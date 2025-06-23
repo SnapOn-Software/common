@@ -69,7 +69,63 @@ function fillHeaders(xhr: XMLHttpRequest, headers: { [key: string]: string; }) {
         }
 }
 
-function getXhr(url: string, body?: IRequestBody, options?: IRestOptions, async = true): IRequestObjects {
+/**
+ * Depending on async:
+ * - Returns an XMLHttpRequest that was opened asynchronously (needs to have event listeners set up before .send()) or
+ * - Returns an XMLHttpRequest that was opened synchronously (will block on .send())
+ */
+function getXhr(url: string, body?: IRequestBody, options?: IRestOptions, async?: true): Promise<IRequestObjects>
+function getXhr(url: string, body?: IRequestBody, options?: IRestOptions, async?: false): IRequestObjects
+function getXhr(url: string, body?: IRequestBody, options?: IRestOptions, async: boolean = false): IRequestObjects | Promise<IRequestObjects> {
+
+    let [myOptions, myCacheOptions] = configureXhrHeaders(url, body, options);
+
+    const xhr: XMLHttpRequest = new XMLHttpRequest();
+    xhr.open(myOptions.method, url, async);
+
+    fillHeaders(xhr, myOptions.headers);
+
+    if (myOptions.cors) {
+        xhr.withCredentials = true;
+    }
+
+    if (!isNullOrEmptyString(myOptions.responseType) && myOptions.responseType !== "text") {
+        if (myCacheOptions.allowCache === true &&
+            (myOptions.responseType === "blob" || myOptions.responseType === "arraybuffer" || myOptions.responseType === "document")) {
+            logger.warn("When allowCache is true, Blob, ArrayBuffer and Document response types will only be stored in runtime memory and not committed to local storage.");
+        }
+        xhr.responseType = myOptions.responseType;
+    }
+
+    const needsDigest =
+        (myOptions.method === "GET" && myOptions.includeDigestInGet) ||
+        (myOptions.method === "POST" && myOptions.includeDigestInPost);
+
+    const applyDigest = (digest: string | null) => {
+        if (digest) {
+            xhr.setRequestHeader("X-RequestDigest", digest);
+        } else {
+            console.warn("X-RequestDigest header not set due to getFormDigest returning null");
+        }
+    }
+
+    const result: IRequestObjects = { xhr, options: myOptions, cacheOptions: myCacheOptions };
+
+    if (needsDigest && async) {
+        return getFormDigest(myOptions.spWebUrl, true).then(digest => {
+            applyDigest(digest);
+            return result;
+        })
+    } else if (needsDigest && !async) {
+        const digest = getFormDigest(myOptions.spWebUrl, false);
+        applyDigest(digest);
+        return result;
+    }
+
+    return result;
+}
+
+function configureXhrHeaders(url: string, body?: IRequestBody, options?: IRestOptions): [IRestRequestOptions, IRestCacheOptions & { cacheKey?: string; }] {
     var optionsWithDefaults = assign<IRestOptions>({}, getDefaultOptions(), options);
     let myCacheOptions: IRestCacheOptions & { cacheKey?: string; } = {};
     Object.keys(AllRestCacheOptionsKeys).forEach(key => {
@@ -80,39 +136,19 @@ function getXhr(url: string, body?: IRequestBody, options?: IRestOptions, async 
     });
     let myOptions: IRestRequestOptions = { ...optionsWithDefaults };
 
-    var xhr: XMLHttpRequest = new XMLHttpRequest();
-
     let jsonType = myOptions.jsonMetadata || jsonTypes.verbose;
-
-    if (myOptions.cors) {
-        xhr.withCredentials = true;
-    }
 
     if (isNullOrUndefined(myOptions.headers)) myOptions.headers = {};//issue 660 in case the sender sent headers as null
     if (isNullOrUndefined(myOptions.headers["Accept"])) {
         myOptions.headers["Accept"] = jsonType;
     }
 
-    let method = myOptions.method;
-    if (isNullOrEmptyString(method)) {
-        method = isNullOrUndefined(body) ? "GET" : "POST";
+    if (isNullOrEmptyString(myOptions.method)) {
+        myOptions.method = isNullOrUndefined(body) ? "GET" : "POST";
     }
 
-    myOptions.method = method;
-    xhr.open(method, url, async !== false);
-    if (method === "GET") {
-        if (myOptions.includeDigestInGet === true) {//by default don't add it, unless explicitly asked in options
-            xhr.setRequestHeader("X-RequestDigest", getFormDigest(myOptions.spWebUrl));
-        }
-    }
-    else if (method === "POST") {
-        if (isNullOrUndefined(myOptions.headers["content-type"])) {
-            myOptions.headers["content-type"] = jsonType;
-        }
-
-        if (myOptions.includeDigestInPost !== false) {//if explicitly set to false - don't include it
-            xhr.setRequestHeader("X-RequestDigest", getFormDigest(myOptions.spWebUrl));
-        }
+    if (myOptions.method === "POST" && isNullOrUndefined(myOptions.headers["content-type"])) {
+        myOptions.headers["content-type"] = jsonType;
     }
 
     if (!isNullOrEmptyString(myOptions.xHttpMethod)) {
@@ -123,27 +159,13 @@ function getXhr(url: string, body?: IRequestBody, options?: IRestOptions, async 
         }
     }
 
-    fillHeaders(xhr, myOptions.headers);
-
-    if (!isNullOrEmptyString(myOptions.responseType) && myOptions.responseType !== "text") {
-        if (myCacheOptions.allowCache === true &&
-            (myOptions.responseType === "blob" || myOptions.responseType === "arraybuffer" || myOptions.responseType === "document")) {
-            logger.warn("When allowCache is true, Blob, ArrayBuffer and Document response types will only be stored in runtime memory and not committed to local storage.");
-        }
-        xhr.responseType = myOptions.responseType;
-    }
-
     //we do not support cache if there is a request body
     //postCacheKey - allow cache on post request for stuff like get item by CamlQuery
     if (isNullOrUndefined(body) || !isNullOrEmptyString(myOptions.postCacheKey)) {
         myCacheOptions.cacheKey = (url + '|' + JSON.stringify(myOptions)).trim().toLowerCase();
     }
 
-    return {
-        xhr: xhr,
-        options: myOptions,
-        cacheOptions: myCacheOptions
-    };
+    return [myOptions, myCacheOptions];
 }
 
 function getCachedResult<T>(objects: IRequestObjects): IJsonSyncResult<T> {
@@ -373,10 +395,9 @@ export function GetJsonSync<T>(url: string, body?: IRequestBody, options?: IRest
     return syncResult;
 }
 
-export function GetJson<T>(url: string, body?: IRequestBody, options?: IRestOptions): Promise<T> {
+export async function GetJson<T>(url: string, body?: IRequestBody, options?: IRestOptions): Promise<T> {
     try {
-        let objects = getXhr(url, body, options);
-
+        let objects = await getXhr(url, body, options, true);
         var cachedResult = getCachedResult<T>(objects);
         if (!isNullOrUndefined(cachedResult)) {
             if (!supressDebugMessages) {
@@ -489,7 +510,7 @@ export function GetJson<T>(url: string, body?: IRequestBody, options?: IRestOpti
 
         return xhrPromise;
     } catch (e) {
-        return Promise.reject({ message: "an error occured" });
+        return Promise.reject({ error: e, message: e.message, stack: e.stack });
     }
 }
 
