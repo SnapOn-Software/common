@@ -1,3 +1,4 @@
+import { __getSPRestErrorData, jsonClone } from "../../exports-index";
 import { PushNoDuplicate, firstOrNull, makeUniqueArray, toHash } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
 import { jsonClone } from "../../helpers/objects";
@@ -1356,6 +1357,53 @@ export async function CreateList(siteUrl: string, info: {
     let newList = (await GetJson<{ d: iCreateListResult }>(url, jsonStringify(body))).d;
     normalizeGuid(newList.Id);
     return newList;
+}
+
+export async function RecycleList(siteUrl: string, listIdOrTitle: string): Promise<{ recycled: boolean; errorMessage?: string}> {
+    siteUrl = GetSiteUrl(siteUrl);
+    const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/recycle()`;
+    const result: { recycled: boolean; errorMessage?: string; } = { recycled: true };
+
+    try {
+        await GetJson<{ d: {Recycle: string; } }>(
+            url, null,
+            {
+                method: "POST",
+                allowCache: false,
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl
+            }
+        );
+    } catch (e) {
+        result.recycled = false;
+        result.errorMessage = __getSPRestErrorData(e).message;
+    }
+
+    return result;
+}
+
+export async function DeleteList(siteUrl: string, listIdOrTitle: string): Promise<{ deleted: boolean; errorMessage?: string }> {
+    siteUrl = GetSiteUrl(siteUrl);
+    const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/deleteObject`;
+    const result: { deleted: boolean; errorMessage?: string } = { deleted: true };
+
+    try {
+        await GetJson(
+            url, null,
+            {
+                method: "POST",
+                xHttpMethod: "DELETE",
+                allowCache: false,
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl
+            }
+        );
+    } catch (e) {
+        result.deleted = false;
+        result.errorMessage = __getSPRestErrorData(e).message;
+    }
+
+    return result;
 }
 
 export async function SearchList(siteUrl: string, listIdOrTitle: string, query: string) {
