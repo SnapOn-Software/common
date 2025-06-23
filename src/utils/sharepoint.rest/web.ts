@@ -88,7 +88,10 @@ export function GetTenantId() {
 
 /** Get tenant id lower case no {} */
 export function GetPortalUrl() {
-    return _spPageContextInfo.portalUrl;
+    if (hasGlobalContext()) {
+        return _spPageContextInfo.portalUrl;
+    }
+    return null;
 }
 
 /** Get site id lower case no {} */
@@ -480,7 +483,7 @@ export async function GetAllSubWebs(siteUrl: string, options?: { allSiteCollecti
 
     if (queryFailed) {
         // Igor: Issue #7702
-        if (_spPageContextInfo && _spPageContextInfo.siteServerRelativeUrl.toLowerCase() !== siteUrl.toLowerCase()) {
+        if (hasGlobalContext() && _spPageContextInfo && _spPageContextInfo.siteServerRelativeUrl.toLowerCase() !== siteUrl.toLowerCase()) {
             //siteUrl = _spPageContextInfo.siteServerRelativeUrl;
             //currentSite = await GetWebInfo(siteUrl);
             //Kevin: Issue 1028
@@ -1030,7 +1033,7 @@ export async function SPServerLocalToday(siteUrl: string) {
 
 export function GetContextWebInformationSync(siteUrl: string): IContextWebInformation {
     var siteId: string = null;
-    if (_spPageContextInfo && _spPageContextInfo.isAppWeb) {
+    if (hasGlobalContext() && _spPageContextInfo && _spPageContextInfo.isAppWeb) {
         //inside an app web you can't get the contextinfo for any other site
         siteUrl = _spPageContextInfo.webServerRelativeUrl;
         siteId = _spPageContextInfo.siteId;
