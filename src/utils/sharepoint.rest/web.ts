@@ -14,7 +14,7 @@ import { AutoDiscoverTenantInfo } from "../auth/discovery";
 import { ConsoleLogger } from "../consolelogger";
 import { toIsoDateFormat } from "../date";
 import { GetJson, GetJsonSync, extraLongLocalCache, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest";
-import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, WEB_SELECT, hasGlobalContext } from "./common";
+import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl, GetSiteUrl, GetSiteUrlLocally, LIST_EXPAND, LIST_SELECT, WEB_SELECT, hasGlobalContext } from "./common";
 import { GetListFields, GetListFieldsSync, GetListRestUrl } from "./list";
 import { SPTimeZoneIdToIANATimeZoneName } from "./timzone-map";
 
@@ -611,7 +611,7 @@ export async function GetWebInfo(siteUrl: string, webId?: string, refreshCache?:
             if (currentWebId !== webId) {
                 let url = _getWebInfoByIdRequestUrl(siteUrl, webId);
                 webInfoResponse = await GetJson<IGetWebInfoResponse>(url, null, {
-                    method: "POST", spWebUrl: GetSiteUrl(siteUrl), ...shortLocalCache,
+                    method: "POST", spWebUrl: GetSiteUrlLocally(siteUrl), ...shortLocalCache,
                     jsonMetadata: jsonTypes.nometadata,
                     allowCache: refreshCache !== true
                 });
@@ -641,7 +641,7 @@ export function GetWebInfoSync(siteUrl: string, webId?: string): IWebBasicInfo {
         if (currentWebId !== webId) {
             let url = _getWebInfoByIdRequestUrl(siteUrl, webId);
             let syncResult = GetJsonSync<IGetWebInfoResponse>(url, null, {
-                method: "POST", spWebUrl: GetSiteUrl(siteUrl), ...shortLocalCache,
+                method: "POST", spWebUrl: GetSiteUrlLocally(siteUrl), ...shortLocalCache,
                 jsonMetadata: jsonTypes.nometadata
             });
             if (syncResult.success) {
