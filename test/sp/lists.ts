@@ -1,17 +1,31 @@
 import assert from "assert";
 
 import {
+    AddViewFieldToListView,
     BaseTypes,
+    ChangeDatetimeFieldMode,
     ChangeTextFieldMode,
     CreateField,
     CreateList, DeleteField, DeleteList,
     FieldTypes,
+    FindListItemById,
     GetFieldSchema, GetList,
+    GetListContentTypes,
     GetListField,
     GetListFields,
     GetListFieldsAsHash,
-    GetStandardListFields, IFieldInfoEX,
-    ListTemplateTypes, RecycleList,
+    GetListFormUrl,
+    GetListItems,
+    GetListLastItemModifiedDate,
+    GetListName,
+    GetListRootFolder,
+    GetListTitle,
+    GetListViews,
+    IFieldInfoEX,
+    ListTemplateTypes,
+    PageType,
+    RecycleList,
+    RemoveViewFieldFromListView,
     UpdateField,
 } from "../../src";
 
@@ -29,6 +43,7 @@ async function genericCreateField(siteUrl: string, listId: string, title: string
     const info = {
         Title: title,
         Type: FieldTypes.Text,
+        AwaitAddToDefaultView: true,
     }
     return await CreateField(siteUrl, listId, info);
 }
@@ -247,12 +262,13 @@ describe("Fields", function () {
 
         specify("verify by InternalName", async function () {
             const schema = await GetFieldSchema(this.siteUrl, listId, field.InternalName);
+            assert.ok(schema, "GetFieldSchema should return a schema object");
             assert.strictEqual(schema.Attributes.RichText, "TRUE", "RichText should be 'TRUE'");
             assert.strictEqual(schema.Attributes.RichTextMode, "FullHTML", "RichTextMode should be 'FullHTML'");
         })
     })
 
-    describe("GetListFields...", function () {
+    describe("GetListFields", function () {
 
         let fieldId1: string, fieldTitle1: string, fieldInternalName1: string;
         let fieldId2: string, fieldTitle2: string, fieldInternalName2: string;
@@ -313,6 +329,7 @@ describe("Fields", function () {
         specify("delete field", async function () {
             const deleted = await DeleteField(this.siteUrl, listId, fieldInternalName);
             assert.ok(deleted, "DeleteField should return true");
+
             await new Promise(resolve => setTimeout(resolve, 1000));
         });
 
@@ -327,3 +344,283 @@ describe("Fields", function () {
         })
     })
 })
+
+describe("GetListTitle", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list title by Id", async function () {
+        const result = await GetListTitle(this.siteUrl, listId);
+        assert.strictEqual(result, listTitle, "Title should match expected title");
+    });
+
+    specify("get list title by Title", async function () {
+        const result = await GetListTitle(this.siteUrl, listTitle);
+        assert.strictEqual(result, listTitle, "Title should match expected title");
+    });
+});
+
+describe("GetListName", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list name by Id", async function () {
+        const result = await GetListName(this.siteUrl, listId);
+        assert.strictEqual(typeof result, "string", "result should be a string");
+        assert.notStrictEqual(result.length, 0, "result should not be empty");
+    });
+
+    specify("get list name by Title", async function () {
+        const result = await GetListName(this.siteUrl, listTitle);
+        assert.strictEqual(typeof result, "string", "result should be a string");
+        assert.notStrictEqual(result.length, 0, "result should not be empty");
+    });
+});
+
+describe("GetListRootFolder", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list root folder by Id", async function () {
+        const result = await GetListRootFolder(this.siteUrl, listId);
+        assert.ok(result, "result should not be null");
+        assert.strictEqual(typeof result.ServerRelativeUrl, "string", "ServerRelativeUrl should be a string");
+        assert.strictEqual(typeof result.Name, "string", "Name should be a string");
+    });
+
+    specify("get list root folder by Title", async function () {
+        const result = await GetListRootFolder(this.siteUrl, listTitle);
+        assert.ok(result, "result should not be null");
+        assert.strictEqual(typeof result.ServerRelativeUrl, "string", "ServerRelativeUrl should be a string");
+        assert.strictEqual(typeof result.Name, "string", "Name should be a string");
+    });
+});
+
+
+describe("GetListViews", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list views by Id", async function () {
+        const views = await GetListViews(this.siteUrl, listId);
+        assert.ok(Array.isArray(views), "views should be an array");
+        assert.ok(views.length > 0, "views should not be empty");
+    });
+
+    specify("get list views by Title", async function () {
+        const views = await GetListViews(this.siteUrl, listTitle);
+        assert.ok(Array.isArray(views), "views should be an array");
+        assert.ok(views.length > 0, "views should not be empty");
+    });
+});
+
+describe("GetListContentTypes", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list content types by Id", async function () {
+        const contentTypes = await GetListContentTypes(this.siteUrl, listId);
+        assert.ok(Array.isArray(contentTypes), "contentTypes should be an array");
+        assert.ok(contentTypes.length > 0, "contentTypes should not be empty");
+    });
+
+    specify("get list content types by Title", async function () {
+        const contentTypes = await GetListContentTypes(this.siteUrl, listTitle);
+        assert.ok(Array.isArray(contentTypes), "contentTypes should be an array");
+        assert.ok(contentTypes.length > 0, "contentTypes should not be empty");
+    });
+});
+
+describe("GetListFormUrl", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list form url for new item by Id", function () {
+        const url = GetListFormUrl(this.siteUrl, listId, PageType.NewForm);
+        assert.strictEqual(typeof url, "string", "url should be a string");
+        assert.ok(url.includes("listform.aspx"), "url should contain listform.aspx");
+        assert.ok(url.includes("PageType=8"), "url should contain PageType=4");
+    });
+
+    specify("get list form url for edit item by Id", function () {
+        const url = GetListFormUrl(this.siteUrl, listId, PageType.EditForm, { itemId: 1 });
+        assert.strictEqual(typeof url, "string", "url should be a string");
+        assert.ok(url.includes("listform.aspx"), "url should contain listform.aspx");
+        assert.ok(url.includes("PageType=6"), "url should contain PageType=6");
+        assert.ok(url.includes("ID=1"), "url should contain ID=1");
+    });
+});
+
+describe("GetListLastItemModifiedDate", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list last item modified date by Id", async function () {
+        const date = await GetListLastItemModifiedDate(this.siteUrl, listId);
+        assert.strictEqual(typeof date, "string", "date should be a string");
+        assert.ok(date.length > 0, "date should not be empty");
+    });
+
+    specify("get list last item modified date by Title", async function () {
+        const date = await GetListLastItemModifiedDate(this.siteUrl, listTitle);
+        assert.strictEqual(typeof date, "string", "date should be a string");
+        assert.ok(date.length > 0, "date should not be empty");
+    });
+});
+
+describe("ChangeDatetimeFieldMode", function () {
+
+    let listId: string, listTitle: string, field: IFieldInfoEX;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+        field = await genericCreateField(this.siteUrl, listId, `TestField_${Date.now()}`);
+    });
+
+    specify("change datetime field mode to include time by Id", async function () {
+        const success = await ChangeDatetimeFieldMode(this.siteUrl, listId, true, field);
+        assert.ok(success, "ChangeDatetimeFieldMode should return true");
+    });
+
+    specify("change datetime field mode to exclude time by Id", async function () {
+        const success = await ChangeDatetimeFieldMode(this.siteUrl, listId, false, field);
+        assert.ok(success, "ChangeDatetimeFieldMode should return true");
+    });
+
+    specify("change datetime field mode to include time by Title", async function () {
+        const success = await ChangeDatetimeFieldMode(this.siteUrl, listTitle, true, field);
+        assert.ok(success, "ChangeDatetimeFieldMode should return true");
+    });
+
+    specify("change datetime field mode to exclude time by Title", async function () {
+        const success = await ChangeDatetimeFieldMode(this.siteUrl, listTitle, false, field);
+        assert.ok(success, "ChangeDatetimeFieldMode should return true");
+    });
+});
+
+describe("GetListItems", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list items by Id", async function () {
+        const items = await GetListItems(this.siteUrl, listId, {
+            columns: ["Id", "Title"],
+            rowLimit: 10
+        });
+        assert.ok(Array.isArray(items), "items should be an array");
+    });
+
+    specify("get list items by Title", async function () {
+        const items = await GetListItems(this.siteUrl, listTitle, {
+            columns: ["Id", "Title"],
+            rowLimit: 10
+        });
+        assert.ok(Array.isArray(items), "items should be an array");
+    });
+});
+
+describe("FindListItemById", function () {
+
+    specify("find list item by id in empty array", function () {
+        const result = FindListItemById([], 1);
+        assert.strictEqual(result, null, "result should be null for empty array");
+    });
+
+    specify("find list item by id in array with items", function () {
+        const items = [
+            { Id: 1, Title: "Item 1", FileRef: "", FileDirRef: "", FileLeafRef: "", FileType: "", FileSystemObjectType: 0, __DisplayTitle: "Item 1" },
+            { Id: 2, Title: "Item 2", FileRef: "", FileDirRef: "", FileLeafRef: "", FileType: "", FileSystemObjectType: 0, __DisplayTitle: "Item 2" }
+        ];
+        const result = FindListItemById(items, 1);
+        assert.ok(result, "result should not be null");
+        assert.strictEqual(result.Id, 1, "should find correct item");
+    });
+});
+
+describe("View Field Operations", function () {
+
+    let listId: string, listTitle: string, viewId: string, fieldInternalName: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));  
+        ({ InternalName: fieldInternalName }  = await genericCreateField(this.siteUrl, listId, `TestViewField_${Date.now()}`));
+        const views = await GetListViews(this.siteUrl, listId, { includeViewFields: true });
+        viewId = views[0].Id;
+    });
+
+    specify("remove view field from list view by Id", async function () {
+        const result = await RemoveViewFieldFromListView(this.siteUrl, listId, viewId, fieldInternalName, true);
+        assert.ok(result, "RemoveViewFieldFromListView should return true");
+    });
+
+    specify("verify by Title", async function () {
+        let views = await GetListViews(this.siteUrl, listTitle, { includeViewFields: true }, true);
+        const view = views.find(v => v.Id === viewId);
+        assert.ok(!view?.ViewFields?.includes(fieldInternalName), "Field should be removed from view");
+    });
+
+    specify("add view field to list view by Id", async function () {
+        const result = await AddViewFieldToListView(this.siteUrl, listId, viewId, fieldInternalName, true);
+        assert.ok(result, "AddViewFieldToListView should return true");
+    });
+
+    specify("verify by Title", async function () {
+        let views = await GetListViews(this.siteUrl, listTitle, { includeViewFields: true }, true);
+        const view = views.filter(v => v.Id === viewId);
+        assert.strictEqual(view?.length, 1, "There should be exactly one view with the specified Id");
+    });
+
+    specify("remove view field from list view by Title", async function () {
+        const result = await RemoveViewFieldFromListView(this.siteUrl, listTitle, viewId, fieldInternalName, true);
+        assert.ok(result, "RemoveViewFieldFromListView should return true");
+    });
+
+    specify("verify by Id", async function () {
+        let views = await GetListViews(this.siteUrl, listId, { includeViewFields: true }, true);
+        const view = views.find(v => v.Id === viewId);
+        assert.ok(!view?.ViewFields?.includes(fieldInternalName), "Field should be removed from view");
+    });
+
+    specify("add view field to list view by Title", async function () {
+        const result = await AddViewFieldToListView(this.siteUrl, listTitle, viewId, fieldInternalName, true);
+        assert.ok(result, "AddViewFieldToListView should return true");
+    });
+
+    specify("verify by Id", async function () {
+        let views = await GetListViews(this.siteUrl, listId, { includeViewFields: true }, true);
+        const view = views.filter(v => v.Id === viewId);
+        assert.strictEqual(view?.length, 1, "There should be exactly one view with the specified Id");
+    });
+});
