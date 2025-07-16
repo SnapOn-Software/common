@@ -456,6 +456,7 @@ export async function CreateField(siteUrl: string, listIdOrTitle: string, option
     /** requies Name and StaticName for the internal name */
     SchemaXmlSpecificInternalName?: boolean;
     SkipAddToDefaultView?: boolean;
+    AwaitAddToDefaultView?: boolean;
     ClientSideComponentId?: string;
     ClientSideComponentProperties?: string;
     JSLink?: string;
@@ -474,12 +475,18 @@ export async function CreateField(siteUrl: string, listIdOrTitle: string, option
 
         try {
             if (options.SkipAddToDefaultView !== true) {
-                //try to add it to default view, don't wait for it
-                GetListViews(siteUrl, listIdOrTitle).then(views => {
+                if (options.AwaitAddToDefaultView === true) {
+                    const views = await GetListViews(siteUrl, listIdOrTitle);
                     let defaultView = firstOrNull(views, v => v.DefaultView);
                     if (defaultView)
-                        GetJson(GetListRestUrl(siteUrl, listIdOrTitle) + `/views('${defaultView.Id}')/ViewFields/addViewField('${internalName}')`, null, { method: "POST", spWebUrl: siteUrl });
-                });
+                        await GetJson(GetListRestUrl(siteUrl, listIdOrTitle) + `/views('${defaultView.Id}')/ViewFields/addViewField('${internalName}')`, null, { method: "POST", spWebUrl: siteUrl });
+                } else {
+                    GetListViews(siteUrl, listIdOrTitle).then(views => {
+                        let defaultView = firstOrNull(views, v => v.DefaultView);
+                        if (defaultView)
+                            GetJson(GetListRestUrl(siteUrl, listIdOrTitle) + `/views('${defaultView.Id}')/ViewFields/addViewField('${internalName}')`, null, { method: "POST", spWebUrl: siteUrl });
+                    });
+                }
             }
         }
         catch (e) { }
@@ -798,22 +805,22 @@ export function GetListViewsSync(siteUrl: string, listIdOrTitle: string, options
     return null;
 }
 
-export async function AddViewFieldToListView(siteUrl: string, listIdOrTitle: string, viewId: string, viewField: string) {
-    return _addOrRemoveViewField(siteUrl, listIdOrTitle, viewId, viewField, "addviewfield");
+export async function AddViewFieldToListView(siteUrl: string, listIdOrTitle: string, viewId: string, viewField: string, refreshCache = false) {
+    return _addOrRemoveViewField(siteUrl, listIdOrTitle, viewId, viewField, "addviewfield", refreshCache);
 }
 
-export async function RemoveViewFieldFromListView(siteUrl: string, listIdOrTitle: string, viewId: string, viewField: string) {
-    return _addOrRemoveViewField(siteUrl, listIdOrTitle, viewId, viewField, "removeviewfield");
+export async function RemoveViewFieldFromListView(siteUrl: string, listIdOrTitle: string, viewId: string, viewField: string, refreshCache = false) {
+    return _addOrRemoveViewField(siteUrl, listIdOrTitle, viewId, viewField, "removeviewfield", refreshCache);
 }
 
-async function _addOrRemoveViewField(siteUrl: string, listIdOrTitle: string, viewId: string, viewField: string, action: "addviewfield" | "removeviewfield") {
+async function _addOrRemoveViewField(siteUrl: string, listIdOrTitle: string, viewId: string, viewField: string, action: "addviewfield" | "removeviewfield", refreshCache: boolean) {
     siteUrl = GetSiteUrl(siteUrl);
 
     if (isNullOrEmptyString(viewField) || !isValidGuid(viewId)) {
         return false;
     }
 
-    let views = await GetListViews(siteUrl, listIdOrTitle, { includeViewFields: true });
+    let views = await GetListViews(siteUrl, listIdOrTitle, { includeViewFields: true }, refreshCache);
 
     if (isNullOrEmptyArray(views)) {
         return false;
@@ -840,9 +847,8 @@ async function _addOrRemoveViewField(siteUrl: string, listIdOrTitle: string, vie
     try {
         let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/views('${normalizeGuid(view.Id)}')/viewfields/${action}('${viewField}')`;
 
-        let result = await GetJson<{ "odata.null": boolean; }>(url, null, { method: "POST" });
-
-        if (result && result["odata.null"] === true) {
+        let result = await GetJson<{ d: { AddViewField?: null; RemoveViewField?: null; } }>(url, null, { method: "POST", allowCache: false });
+        if (result && (result.d.AddViewField === null || result.d.RemoveViewField === null)) {
             return true;
         }
     } catch { }
