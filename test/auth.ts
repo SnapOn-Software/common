@@ -1,10 +1,10 @@
 import {ConfidentialClientApplication, Configuration} from "@azure/msal-node";
-import * as fs from "node:fs";
+import assert from "assert";
 
-import path from "node:path";
-import dotenv from "dotenv";
-dotenv.config({ path: "test/.env" });
-
+assert(process.env.clientId, "clientId must be set in .env");
+assert(process.env.tenantId, "tenantId must be set in .env");
+assert(process.env.clientCertificateThumbprint, "clientCertificateThumbprint must be set in .env");
+assert(process.env.clientKey, "clientKey must be set in .env");
 
 const config: Configuration = {
     auth: {
@@ -12,7 +12,7 @@ const config: Configuration = {
         authority: `https://login.microsoftonline.com/${process.env.tenantId}`,
         clientCertificate: {
             thumbprintSha256: process.env.clientCertificateThumbprint,
-            privateKey: fs.readFileSync(process.env.clientKeyPath, "utf8"),
+            privateKey: process.env.clientKey
         }
     },
 };
@@ -25,5 +25,6 @@ const cca = new ConfidentialClientApplication(config);
 
 export async function getToken() {
     const auth = await cca.acquireTokenByClientCredential(clientCredentialRequest)
+    assert(auth, "must acquire token");
     return auth.accessToken;
 }
