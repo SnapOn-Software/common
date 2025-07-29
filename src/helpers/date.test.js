@@ -2,26 +2,26 @@ import assert from 'assert/strict';
 import test from 'node:test';
 import { getDateFromToken, getTotalDaysInMonth, isISODate, isISODateUTC, isNowToken, isStandardDate, isTodayToken, shiftMonths } from "./date";
 
-test('isTodayToken', t => {
-    assert.strictEqual(isTodayToken(''), false);
-    assert.strictEqual(isTodayToken('today'), false);
-    assert.strictEqual(isTodayToken('[ to day]'), false);
-    assert.strictEqual(isTodayToken('[today ]'), false);
-    assert.strictEqual(isTodayToken('asd[today]'), false);
-    assert.strictEqual(isTodayToken('[today]adsd'), true);
-    assert.strictEqual(isTodayToken('[today] asd'), true);
-    assert.strictEqual(isTodayToken('[today]'), true);
+test('isTodayToken', async t => {
+    await t.test('emptyString', () => assert.strictEqual(isTodayToken(''), false));
+    await t.test("'today'", () => assert.strictEqual(isTodayToken('today'), false));
+    await t.test("'[ to day]'", () => assert.strictEqual(isTodayToken('[ to day]'), false));
+    await t.test("'[today ]'", () => assert.strictEqual(isTodayToken('[today ]'), false));
+    await t.test("'asd[today]'", () => assert.strictEqual(isTodayToken('asd[today]'), false));
+    await t.test("'[today]adsd'", () => assert.strictEqual(isTodayToken('[today]adsd'), true));
+    await t.test("'[today] asd'", () => assert.strictEqual(isTodayToken('[today] asd'), true));
+    await t.test("'[today]'", () => assert.strictEqual(isTodayToken('[today]'), true));
 });
 
-test('isNowToken', t => {
-    assert.strictEqual(isNowToken(''), false);
-    assert.strictEqual(isNowToken('now'), false);
-    assert.strictEqual(isNowToken('[ now]'), false);
-    assert.strictEqual(isNowToken('[now ]'), false);
-    assert.strictEqual(isNowToken('asd[now]'), false);
-    assert.strictEqual(isNowToken('[now]adsd'), true);
-    assert.strictEqual(isNowToken('[now] asd'), true);
-    assert.strictEqual(isNowToken('[now]'), true);
+test('isNowToken', async t => {
+    await t.test('emptyString', () => assert.strictEqual(isNowToken(''), false));
+    await t.test("'now'", () => assert.strictEqual(isNowToken('now'), false));
+    await t.test("'[ now]'", () => assert.strictEqual(isNowToken('[ now]'), false));
+    await t.test("'[now ]'", () => assert.strictEqual(isNowToken('[now ]'), false));
+    await t.test("'asd[now]'", () => assert.strictEqual(isNowToken('asd[now]'), false));
+    await t.test("'[now]adsd'", () => assert.strictEqual(isNowToken('[now]adsd'), true));
+    await t.test("'[now] asd'", () => assert.strictEqual(isNowToken('[now] asd'), true));
+    await t.test("'[now]'", () => assert.strictEqual(isNowToken('[now]'), true));
 });
 
 test('getDateFromToken', async t => {
@@ -61,60 +61,60 @@ test('getDateFromToken', async t => {
 
 });
 
-test('isStandardDate', t => {
-    assert.strictEqual(isStandardDate(''), false);
-    assert.strictEqual(isStandardDate('2023-08-21T15:54:14.954Z'), false);
-    assert.strictEqual(isStandardDate('2023-08-21T15:54:14.954'), false);
-    assert.strictEqual(isStandardDate('2023-08-21T15:54:14Z'), false);
-    assert.strictEqual(isStandardDate('2023-08-21T15:54:14'), false);
-    assert.strictEqual(isStandardDate('2023-08-21T15:54'), true);
+test('isStandardDate', async t => {
+    await t.test('emptyString', () => assert.strictEqual(isStandardDate(''), false));
+    await t.test('2023-08-21T15:54:14.954Z', () => assert.strictEqual(isStandardDate('2023-08-21T15:54:14.954Z'), false));
+    await t.test('2023-08-21T15:54:14.954', () => assert.strictEqual(isStandardDate('2023-08-21T15:54:14.954'), false));
+    await t.test('2023-08-21T15:54:14Z', () => assert.strictEqual(isStandardDate('2023-08-21T15:54:14Z'), false));
+    await t.test('2023-08-21T15:54:14', () => assert.strictEqual(isStandardDate('2023-08-21T15:54:14'), false));
+    await t.test('2023-08-21T15:54', () => assert.strictEqual(isStandardDate('2023-08-21T15:54'), true));
 });
 
-test('isISODate', t => {
-    assert.strictEqual(isISODate(''), false);
-    assert.strictEqual(isISODate('2023-08-21T15:54:14.954Z'), true);
-    assert.strictEqual(isISODate('2023-08-21T15:54:14.954'), true);
-    assert.strictEqual(isISODate('2023-08-21T15:54:14Z'), true);
-    assert.strictEqual(isISODate('2023-08-21T15:54:14'), true);
-    assert.strictEqual(isISODate('2023-08-21T15:54'), false);
+test('isISODate', async t => {
+    await t.test('emptyString', () => assert.strictEqual(isISODate(''), false));
+    await t.test('2023-08-21T15:54:14.954Z', () => assert.strictEqual(isISODate('2023-08-21T15:54:14.954Z'), true));
+    await t.test('2023-08-21T15:54:14.954', () => assert.strictEqual(isISODate('2023-08-21T15:54:14.954'), true));
+    await t.test('2023-08-21T15:54:14Z', () => assert.strictEqual(isISODate('2023-08-21T15:54:14Z'), true));
+    await t.test('2023-08-21T15:54:14', () => assert.strictEqual(isISODate('2023-08-21T15:54:14'), true));
+    await t.test('2023-08-21T15:54', () => assert.strictEqual(isISODate('2023-08-21T15:54'), false));
 });
 
-test('isISODateUTC', t => {
-    assert.strictEqual(isISODateUTC(''), false);
-    assert.strictEqual(isISODateUTC('2023-08-21T15:54:14.954Z'), true);
-    assert.strictEqual(isISODateUTC('2023-08-21T15:54:14.954'), false);
-    assert.strictEqual(isISODateUTC('2023-08-21T15:54:14Z'), true);
-    assert.strictEqual(isISODateUTC('2023-08-21T15:54:14'), false);
-    assert.strictEqual(isISODateUTC('2023-08-21T15:54'), false);
+test('isISODateUTC', async t => {
+    await t.test('emptyString', () => assert.strictEqual(isISODateUTC(''), false));
+    await t.test('2023-08-21T15:54:14.954Z', () => assert.strictEqual(isISODateUTC('2023-08-21T15:54:14.954Z'), true));
+    await t.test('2023-08-21T15:54:14.954', () => assert.strictEqual(isISODateUTC('2023-08-21T15:54:14.954'), false));
+    await t.test('2023-08-21T15:54:14Z', () => assert.strictEqual(isISODateUTC('2023-08-21T15:54:14Z'), true));
+    await t.test('2023-08-21T15:54:14', () => assert.strictEqual(isISODateUTC('2023-08-21T15:54:14'), false));
+    await t.test('2023-08-21T15:54', () => assert.strictEqual(isISODateUTC('2023-08-21T15:54'), false));
 });
 
-test('getTotalDaysInMonth', t => {
+test('getTotalDaysInMonth', async t => {
     var d = new Date("01-01-2023");
-    assert.strictEqual(getTotalDaysInMonth(d), 31);
+    await t.test('01-01-2023', () => assert.strictEqual(getTotalDaysInMonth(d), 31));
 
     d = new Date("09-01-2023");
-    assert.strictEqual(getTotalDaysInMonth(d), 30);
+    await t.test('09-01-2023', () => assert.strictEqual(getTotalDaysInMonth(d), 30));
 
     d = new Date("02-01-2023");
-    assert.strictEqual(getTotalDaysInMonth(d), 28);
+    await t.test('02-01-2023', () => assert.strictEqual(getTotalDaysInMonth(d), 28));
 
     d = new Date("02-01-2024"); //leap year
-    assert.strictEqual(getTotalDaysInMonth(d), 29);
+    await t.test('02-01-2024', () => assert.strictEqual(getTotalDaysInMonth(d), 29));
 });
 
-test('shiftMonths', t => {
+test('shiftMonths', async t => {
     var d = new Date("01-31-2023");
     shiftMonths(d, 1)
-    assert.strictEqual(d.getMonth() + 1, 2);
-    assert.strictEqual(d.getDate(), 28);
+    await t.test('01-31-2023.getMonth() + 1, 1', () => assert.strictEqual(d.getMonth() + 1, 2));
+    await t.test('d.getDate, 1', () => assert.strictEqual(d.getDate(), 28));
 
     d = new Date("01-31-2023");
     shiftMonths(d, 13)
-    assert.strictEqual(d.getMonth() + 1, 2);
-    assert.strictEqual(d.getDate(), 29); //leap year
+    await t.test('01-31-2023.getMonth() + 1, 13', () => assert.strictEqual(d.getMonth() + 1, 2));
+    await t.test('d.getDate, 13', () => assert.strictEqual(d.getDate(), 29)); //leap year
 
     d = new Date("01-31-2023");
     shiftMonths(d, -11)
-    assert.strictEqual(d.getMonth() + 1, 2);
-    assert.strictEqual(d.getDate(), 28);
+    await t.test('01-31-2023.getMonth() + 1, -11', () => assert.strictEqual(d.getMonth() + 1, 2));
+    await t.test('d.getDate, -11', () => assert.strictEqual(d.getDate(), 28));
 });

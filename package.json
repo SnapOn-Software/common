@@ -66,6 +66,7 @@
     "packageManager": "npm@9.5.1",
     "devDependencies": {
         "@types/dom-navigation": "^1.0.4",
+        "@types/node": "^24.1.0",
         "create-ts-index": "^1.14.0",
         "fs-extra": "^11.2.0",
         "madge": "^6.1.0",
