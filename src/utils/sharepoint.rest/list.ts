@@ -394,39 +394,55 @@ export function GetListWorkflows(siteUrl: string, listIdOrTitle: string, refresh
         .catch<IListWorkflowAssociation[]>(() => []);
 }
 
-export function UserHasManagePermissions(siteUrl: string, listIdOrTitle: string): Promise<boolean> {
-    siteUrl = GetSiteUrl(siteUrl);
+export async function GetListEffectiveBasePermissions(siteUrlOrId: string, listIdOrTitle: string) {
+    let siteUrl = GetSiteUrl(siteUrlOrId);
 
-    return GetJson<{ d: { EffectiveBasePermissions: { High: number; Low: number; }; }; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
-        { ...shortLocalCache })
-        .then(r => {
-            return new SPBasePermissions(r.d.EffectiveBasePermissions).has(SPBasePermissionKind.ManageLists);
-        })
-        .catch<boolean>(() => null);
+    let response = await GetJson<{
+        d: {
+            EffectiveBasePermissions: {
+                High: number; Low: number;
+            };
+        };
+    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
+        { ...shortLocalCache });
+
+    return response.d.EffectiveBasePermissions;
 }
 
-export function UserHasEditPermissions(siteUrl: string, listIdOrTitle: string): Promise<boolean> {
-    return UserHasPermissions(siteUrl, listIdOrTitle, SPBasePermissionKind.EditListItems);
+export function GetListEffectiveBasePermissionsSync(siteUrlOrId: string, listIdOrTitle: string) {
+    let siteUrl = GetSiteUrl(siteUrlOrId);
+
+    let response = GetJsonSync<{
+        d: {
+            EffectiveBasePermissions: {
+                High: number; Low: number;
+            };
+        };
+    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
+        { ...shortLocalCache });
+
+    return response.result.d.EffectiveBasePermissions;
+}
+
+export function UserHasManagePermissions(siteUrlOrId: string, listIdOrTitle: string): Promise<boolean> {
+    return GetListEffectiveBasePermissions(siteUrlOrId, listIdOrTitle).then((effectiveBasePermissions) => {
+        return new SPBasePermissions(effectiveBasePermissions).has(SPBasePermissionKind.ManageLists);
+    }).catch<boolean>(() => null);
+}
+
+export function UserHasEditPermissions(siteUrlOrId: string, listIdOrTitle: string): Promise<boolean> {
+    return UserHasPermissions(siteUrlOrId, listIdOrTitle, SPBasePermissionKind.EditListItems);
 }
 
 export function UserHasPermissions(siteUrlOrId: string, listIdOrTitle: string, permissionKind: SPBasePermissionKind): Promise<boolean> {
-    let siteUrl = GetSiteUrl(siteUrlOrId);
-
-    return GetJson<{ d: { EffectiveBasePermissions: { High: number; Low: number; }; }; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
-        { ...shortLocalCache })
-        .then(r => {
-            return new SPBasePermissions(r.d.EffectiveBasePermissions).has(permissionKind);
-        })
-        .catch<boolean>(() => null);
+    return GetListEffectiveBasePermissions(siteUrlOrId, listIdOrTitle).then((effectiveBasePermissions) => {
+        return new SPBasePermissions(effectiveBasePermissions).has(permissionKind);
+    }).catch<boolean>(() => null);
 }
 
 export function UserHasPermissionsSync(siteUrlOrId: string, listIdOrTitle: string, permissionKind: SPBasePermissionKind): boolean {
-    let siteUrl = GetSiteUrl(siteUrlOrId);
-
-    const res = GetJsonSync<{ d: { EffectiveBasePermissions: { High: number; Low: number; }; }; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
-        { ...shortLocalCache });
-
-    return new SPBasePermissions(res.result.d.EffectiveBasePermissions).has(permissionKind);
+    let effectiveBasePermissions = GetListEffectiveBasePermissionsSync(siteUrlOrId, listIdOrTitle);
+    return new SPBasePermissions(effectiveBasePermissions).has(permissionKind);
 }
 
 /** create a new column and try to add it to default view. Send either Title and Type, or SchemaXml. Create with SchemaXml also adds to all content types */
@@ -739,12 +755,14 @@ export async function DeleteField(siteUrl: string, listIdOrTitle: string, fieldI
 }
 
 export interface IListViewOptions { includeViewFields?: boolean; }
+
 export function GetListViews(siteUrl: string, listIdOrTitle: string, options?: IListViewOptions, refreshCache = false): Promise<iListView[]> {
     siteUrl = GetSiteUrl(siteUrl);
 
+    let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/views?$select=Title,Id,ServerRelativeUrl,RowLimit,Paged,ViewQuery,ListViewXml,PersonalView,MobileView,MobileDefaultView,Hidden,DefaultView,ReadOnlyView${options && options.includeViewFields ? "&$expand=ViewFields" : ""}`
     return GetJson<{
         value: iListView[];
-    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/views?$select=Title,Id,ServerRelativeUrl,RowLimit,Paged,ViewQuery,ListViewXml,PersonalView,MobileView,MobileDefaultView,Hidden,DefaultView,ReadOnlyView${options && options.includeViewFields ? "&$expand=ViewFields" : ""}`,
+    }>(url,
         null, { allowCache: refreshCache !== true, jsonMetadata: jsonTypes.nometadata })
         .then(r => {
             let views = r.value;
@@ -761,17 +779,16 @@ export function GetListViews(siteUrl: string, listIdOrTitle: string, options?: I
         .catch<iListView[]>(() => null);
 }
 
-export function GetListViewsSync(siteUrl: string, listIdOrTitle: string, refreshCache = false): iListView[] {
+export function GetListViewsSync(siteUrl: string, listIdOrTitle: string, options?: IListViewOptions, refreshCache = false): iListView[] {
     siteUrl = GetSiteUrl(siteUrl);
+    let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/views?$select=Title,Id,ServerRelativeUrl,RowLimit,Paged,ViewQuery,ListViewXml,PersonalView,MobileView,MobileDefaultView,Hidden,DefaultView,ReadOnlyView${options && options.includeViewFields ? "&$expand=ViewFields" : ""}`
 
-    let result = GetJsonSync<{
-        d: {
-            results: iListView[];
-        };
-    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/views`,
-        null, { allowCache: refreshCache !== true });
-    if (result.success) {
-        let views = result && result.result && result.result.d && result.result.d.results;
+    let response = GetJsonSync<{
+        value: iListView[];
+    }>(url,
+        null, { allowCache: refreshCache !== true, jsonMetadata: jsonTypes.nometadata });
+    if (response.success) {
+        let views = response && response.result && response.result.value;
         if (isNotEmptyArray(views)) {
             views.forEach(v => { v.Id = normalizeGuid(v.Id); });
         }

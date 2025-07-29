@@ -1,4 +1,4 @@
-import { isString } from "../../exports-index";
+import { GetSiteUrl, isNullOrEmptyString, isString, makeFullUrl, normalizeUrl } from "../../exports-index";
 import { firstIndexOf } from "../../helpers/collections.base";
 import { contentTypes, jsonTypes } from "../../types/rest.types";
 import { PrincipalType } from "../../types/sharepoint.types";
@@ -114,6 +114,8 @@ export class SPPeopleSearchService {
      */
     constructor(private context: { siteUrl }) {
         this.cachedLocalUsers = {};
+        //ISSUE: 2154
+        this.context.siteUrl = makeFullUrl(GetSiteUrl(this.context.siteUrl));
         this.cachedLocalUsers[this.context.siteUrl] = [];
     }
 
@@ -123,7 +125,7 @@ export class SPPeopleSearchService {
      * @param value
      */
     public generateUserPhotoLink(value: string, size: "S" | "M" = "M"): string {
-        return `${this.context.siteUrl}/_layouts/15/userphoto.aspx?accountname=${encodeURIComponent(value)}&size=M`;
+        return `${normalizeUrl(this.context.siteUrl)}/_layouts/15/userphoto.aspx?accountname=${encodeURIComponent(value)}&size=M`;
     }
 
     /**
@@ -186,7 +188,13 @@ export class SPPeopleSearchService {
     private async searchTenant(siteUrl: string, query: string, maximumSuggestions: number, principalTypes: PrincipalType[], ensureUser: boolean, groupId: number): Promise<iPeoplePickerUserItem[]> {
         try {
             // If the running env is SharePoint, loads from the peoplepicker web service
-            const userRequestUrl: string = `${siteUrl || this.context.siteUrl}/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.clientPeoplePickerSearchUser`;
+            let baseUrl = this.context.siteUrl;
+            if (!isNullOrEmptyString(siteUrl)) {
+                baseUrl = makeFullUrl(GetSiteUrl(siteUrl));
+            }
+            baseUrl = normalizeUrl(baseUrl);
+            
+            const userRequestUrl: string = `${baseUrl}/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.clientPeoplePickerSearchUser`;
             const searchBody = {
                 queryParams: {
                     AllowEmailAddresses: true,
@@ -307,7 +315,6 @@ export class SPPeopleSearchService {
 
                 return userResults;
             }
-
 
             // Nothing to return
             return [];

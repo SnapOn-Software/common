@@ -1,4 +1,4 @@
-import { promiseLock } from "../../exports-index";
+import { isISODate, promiseLock } from "../../exports-index";
 import { sortArray } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
 import { getGlobal } from "../../helpers/objects";
@@ -13,9 +13,10 @@ import { IAppTile, IGroupInfo, IRestRoleDefinition, IRootWebInfo, ISiteInfo, ITi
 import { AutoDiscoverTenantInfo } from "../auth/discovery";
 import { ConsoleLogger } from "../consolelogger";
 import { toIsoDateFormat } from "../date";
-import { GetJson, GetJsonSync, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest";
+import { GetJson, GetJsonSync, extraLongLocalCache, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest";
 import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, WEB_SELECT, hasGlobalContext } from "./common";
 import { GetListFields, GetListFieldsSync, GetListRestUrl } from "./list";
+import { SPTimeZoneIdToIANATimeZoneName } from "./timzone-map";
 
 const logger = ConsoleLogger.get("SharePoint.Rest.Web");
 
@@ -293,6 +294,7 @@ export function GetContentTypesSync(siteUrl: string, options: IGetContentTypesOp
 interface IGetListsOptions {
     includeRootFolders?: boolean;
     includeViews?: boolean;
+    allowCache?: boolean;
 }
 
 function _getListsRequestUrl(siteUrl: string, options: IGetListsOptions) {
@@ -335,8 +337,8 @@ function _postProcessGetLists(lists: iList[], options: Omit<IGetListsOptions, "i
 
 export function GetLists(siteUrl: string, options: IGetListsOptions = {}): Promise<iList[]> {
     let url = _getListsRequestUrl(siteUrl, options);
-
-    return GetJson<{ value: iList[]; }>(url, null, { allowCache: true, jsonMetadata: jsonTypes.nometadata })
+    const allowCache = options.allowCache === undefined ? true : options.allowCache;
+    return GetJson<{ value: iList[]; }>(url, null, { allowCache, jsonMetadata: jsonTypes.nometadata })
         .then(result => {
             return _postProcessGetLists(result.value, options);
         })
@@ -748,10 +750,25 @@ export async function GetServerTimeZone(siteUrl: string) {
 
     let result = await GetJson<{
         d: ITimeZone;
-    }>(getTimeZoneUrl, null, { ...longLocalCache });
+    }>(getTimeZoneUrl, null, { ...extraLongLocalCache });
 
     if (result && result.d && !isNullOrUndefined(result.d)) {
         return result.d;
+    }
+    else return null;
+}
+
+export function GetServerTimeZoneSync(siteUrl: string) {
+    siteUrl = GetSiteUrl(siteUrl);
+
+    let getTimeZoneUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone`;
+
+    let response = GetJsonSync<{
+        d: ITimeZone;
+    }>(getTimeZoneUrl, null, { ...extraLongLocalCache });
+
+    if (response && response.result.d && !isNullOrUndefined(response.result.d)) {
+        return response.result.d;
     }
     else return null;
 }
@@ -816,6 +833,7 @@ export async function SPServerLocalTimeToUTCDate(siteUrl: string, date: string |
     let serverTimeOffset = await GetServerTimeOffset(siteUrl, date);
     return _SPServerLocalTimeToUTCDate(date, serverTimeOffset);
 }
+
 /** get date yyyy:MM:ddTHH:mm:ss NO ZED, or a date object created in the server local time, and return a date object of the corrected UTC time */
 export function SPServerLocalTimeToUTCDateSync(siteUrl: string, date: string | Date) {
     //used in 7700
@@ -827,6 +845,7 @@ export function SPServerLocalTimeToUTCDateSync(siteUrl: string, date: string | D
     let serverTimeOffset = GetServerTimeOffsetSync(siteUrl, date);
     return _SPServerLocalTimeToUTCDate(date, serverTimeOffset);
 }
+
 function _SPServerLocalTimeToUTCDate(date: Date, serverTimeOffset: number) {
     let localTimeOffset = date.getTimezoneOffset() * 60000;
     return new Date(serverTimeOffset - localTimeOffset + date.getTime());
@@ -868,6 +887,9 @@ export function SPServerLocalTimeToUTCSync(siteUrl: string, date: string | Date)
     return result.success && result.result.value || null;
 }
 
+//todo: move to types
+type IntlDateSupportedLocales = "en-CA" | "sv-SE";
+
 /** get utc date yyyy:MM:ddTHH:mm:ssZ
  * returns yyyy:MM:ddTHH:mm:ss NO ZED
  * expensive, but works. for faster bulk parsing use toIsoDateFormat(new Date(date.getTime()-GetServerTimeOffset,{omitZ:true}))
@@ -879,11 +901,28 @@ export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Dat
         date = toIsoDateFormat(date);
     }
 
-    let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/utcToLocalTime(@date)?@date='${encodeURIComponent(date)}'`;
+    let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
+    if (!isNullOrEmptyString(supportedLocale)) {
+        try {
+            let regionalSettings = await GetServerTimeZone(siteUrl);
 
+            let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+            if (!isNullOrEmptyString(timeZone)) {
+                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
+
+                if (!isNullOrEmptyString(result)) {
+                    return result;
+                }
+            }
+        } catch {
+        }
+    }
+
+    let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/utcToLocalTime(@date)?@date='${encodeURIComponent(date)}'`;
     let result = await GetJson<{ value: string; }>(restUrl, null, { ...longLocalCache, jsonMetadata: jsonTypes.nometadata });
     return result && result.value || null;
 }
+
 /** get utc date yyyy:MM:ddTHH:mm:ssZ
  * returns yyyy:MM:ddTHH:mm:ss NO ZED
  * expensive, but works. for faster bulk parsing use toIsoDateFormat(new Date(date.getTime()-GetServerTimeOffset,{omitZ:true}))
@@ -895,12 +934,58 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
         date = toIsoDateFormat(date);
     }
 
-    let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/utcToLocalTime(@date)?@date='${encodeURIComponent(date)}'`;
+    let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
+    if (!isNullOrEmptyString(supportedLocale)) {
+        try {
+            let regionalSettings = GetServerTimeZoneSync(siteUrl);
 
+            let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+            if (!isNullOrEmptyString(timeZone)) {
+                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
+                if (!isNullOrEmptyString(result)) {
+                    return result;
+                }
+            }
+        } catch {
+        }
+    }
+
+    let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/utcToLocalTime(@date)?@date='${encodeURIComponent(date)}'`;
     let result = GetJsonSync<{ value: string; }>(restUrl, null, { ...longLocalCache, jsonMetadata: jsonTypes.nometadata });
     return result.success && result.result.value || null;
 }
 
+function _getSupportedLocaleForUTCToSPServerTime() {
+    try {
+        let supportedLocales = Intl.DateTimeFormat.supportedLocalesOf(["en-CA", "sv-SE"]) as IntlDateSupportedLocales[];
+        return supportedLocales[0] as IntlDateSupportedLocales;
+    } catch {
+    }
+    return null;
+}
+
+function _UTCDateStringToSPServerLocalDateString(utcISODate: string, targetIanaTimeZone: string, supportedLocale: IntlDateSupportedLocales) {
+    let formatter = new Intl.DateTimeFormat(supportedLocale, {
+        timeZone: targetIanaTimeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        fractionalSecondDigits: 3,
+        hour12: false
+    });
+
+    let value1 = formatter.format(new Date(utcISODate))
+    if (supportedLocale.toLowerCase() === "en-ca") {
+        value1 = value1.replace(",", "").replace(" ", "T").split(".000")[0];
+    } else {
+        value1 = value1.replace(",", ".").replace(" ", "T").split(".000")[0];
+    }
+
+    return isISODate(value1) ? value1 : null;
+}
 
 export function SPServerLocalTimeSync(siteUrl?: string) {
     siteUrl = GetSiteUrl(siteUrl);
@@ -996,7 +1081,7 @@ function _parseCustomActionReponse(action: IUserCustomActionInfo) {
         return action;
     }
 
-    if (!isNullOrUndefined(action.Rights)) {
+    if (!isNullOrUndefined(action.Rights) && !isString(action.Rights)) {
         if (isNumeric(action.Rights.High)) {
             action.Rights.High = Number(action.Rights.High)
         }
@@ -1013,7 +1098,7 @@ function _convertCustomActionToPostData(action: Omit<Partial<IUserCustomActionIn
     //a list are stored using numbers.
     let hasRights = !isNullOrUndefined(action.Rights);
     let partialAction: {
-        Rights: {
+        Rights: string | {
             High: string;
             Low: string;
         };

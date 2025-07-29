@@ -9,7 +9,7 @@ import { DateTimeFieldFormatType, IAttachmentInfo, IFieldCurrencyInfo, IFieldDat
 import { IRestItem } from "../../types/sharepoint.utils.types";
 import { LocaleKnownScript } from "../../utils/knownscript";
 import { ConsoleLogger } from "../consolelogger";
-import { GetJson, GetJsonSync } from "../rest";
+import { GetJson, GetJsonSync, shortLocalCache } from "../rest";
 import { GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate } from "./common";
 import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./list";
 import { GetUser, GetUserSync } from "./user";
@@ -544,4 +544,19 @@ export async function AssignListItemPermission(siteUrl: string, listIdOrTitle: s
 export async function RemoveListItemPermission(siteUrl: string, listIdOrTitle: string, itemId: number, principalId: number, roleId: number) {
     let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/items(${itemId})/roleassignments/removeroleassignment(principalid=${principalId},roleDefId=${roleId})`;
     await GetJson(url, undefined, { method: "POST", allowCache: false, jsonMetadata: jsonTypes.nometadata, spWebUrl: siteUrl });
+}
+
+export async function GetItemEffectiveBasePermissions(siteUrlOrId: string, listIdOrTitle: string, itemId: number) {
+    let siteUrl = GetSiteUrl(siteUrlOrId);
+
+    let response = await GetJson<{
+        d: {
+            EffectiveBasePermissions: {
+                High: number; Low: number;
+            };
+        };
+    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/EffectiveBasePermissions`, null,
+        { ...shortLocalCache });
+
+    return response.d.EffectiveBasePermissions;
 }
