@@ -174,7 +174,7 @@ function rhex(n) {
     return s;
 }
 
-function hex(x: []): string {
+function hex(x: any[]): string {
     for (var i = 0; i < x.length; i++)
         x[i] = rhex(x[i]);
     return x.join('');
