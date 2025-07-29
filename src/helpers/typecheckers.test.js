@@ -90,7 +90,7 @@ test('isType', async t => {
     await t.test('emptyString', t => assert.strictEqual(isType('', 'string'), true));
     await t.test("'1'", t => assert.strictEqual(isType('1', 'string'), true));
     await t.test("'1'", t => assert.strictEqual(isType('1', 'integer'), false));
-    await t.test('1', t => assert.strictEqual(isType(1, 'integer'), false));//ask if its meant to all be testing for string
+    await t.test('1', t => assert.strictEqual(isType(1, 'integer'), false));
 });
 
 test('isString', async t => {
