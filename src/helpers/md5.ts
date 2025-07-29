@@ -4,7 +4,7 @@
 
 
 /** Get an MD5 hash for a specific string input */
-function md5(s: string): string {
+export function md5(s: string): string {
     return hex(md51(s));
 }
 
