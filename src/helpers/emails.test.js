@@ -6,7 +6,7 @@ test('isValidEmail', async t => {
     await t.test('empty string', () => assert.deepEqual(isValidEmail(''), false));
     await t.test('null', () => assert.deepEqual(isValidEmail(null), false));
     await t.test('undefined', () => assert.deepEqual(isValidEmail(undefined), false));
-    await t.test('aab', () => assert.deepEqual(isValidEmail('aab'), false));
-    await t.test('a/^&*ab', () => assert.deepEqual(isValidEmail('a/^&*ab'), false));
-    await t.test('a7@a$/b.com$', () => assert.deepEqual(isValidEmail('a7@a$/b.com$'), true));
+    await t.test('string', () => assert.deepEqual(isValidEmail('aab'), false));
+    await t.test('characters /^&*', () => assert.deepEqual(isValidEmail('a/^&*ab'), false));
+    await t.test('tests domain, int, characters 7@$/.com$', () => assert.deepEqual(isValidEmail('a7@a$/b.com$'), true));
 });
