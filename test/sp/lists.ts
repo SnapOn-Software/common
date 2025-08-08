@@ -6,7 +6,9 @@ import {
     ChangeDatetimeFieldMode,
     ChangeTextFieldMode,
     CreateField,
-    CreateList, DeleteField, DeleteList,
+    CreateList,
+    DeleteField,
+    DeleteList,
     FieldTypes,
     FindListItemById,
     GetFieldSchema, GetList,
@@ -19,6 +21,7 @@ import {
     GetListLastItemModifiedDate,
     GetListName,
     GetListRootFolder,
+    GetLists,
     GetListTitle,
     GetListViews,
     IFieldInfoEX,
@@ -29,7 +32,7 @@ import {
     UpdateField,
 } from "../../src";
 
-async function genericCreateList(siteUrl: string, title: string) {
+export async function genericCreateList(siteUrl: string, title: string) {
     const info = {
         title,
         description: "test list",
@@ -39,7 +42,7 @@ async function genericCreateList(siteUrl: string, title: string) {
     return await CreateList(siteUrl, info);
 }
 
-async function genericCreateField(siteUrl: string, listId: string, title: string) {
+export async function genericCreateField(siteUrl: string, listId: string, title: string) {
     const info = {
         Title: title,
         Type: FieldTypes.Text,
@@ -71,6 +74,52 @@ describe("CreateList", function () {
         const result = await GetList(this.siteUrl, listTitle);
         assert.strictEqual(result.Id, listId, "'Id' should match expected id");
         assert.strictEqual(result.Title, listTitle, "'Title' should match expected title");
+    });
+});
+
+describe("GetList", function () {
+
+    let listId: string, listTitle: string;
+
+    before(async function () {
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+    });
+
+    specify("get list by Id", async function () {
+        const result = await GetList(this.siteUrl, listId);
+        assert.strictEqual(result.Id, listId, "'Id' should match expected id");
+        assert.strictEqual(result.Title, listTitle, "'Title' should match expected title");
+    });
+
+    specify("get list by Title", async function () {
+        const result = await GetList(this.siteUrl, listTitle);
+        assert.strictEqual(result.Id, listId, "'Id' should match expected id");
+        assert.strictEqual(result.Title, listTitle, "'Title' should match expected title");
+    });
+});
+
+describe("GetLists", function () {
+
+    let listId1: string, listTitle1: string;
+    let listId2: string, listTitle2: string;
+
+    before(async function () {
+        ({ Id: listId1, Title: listTitle1 } = await genericCreateList(this.siteUrl, `TestList1_${Date.now()}`));
+        ({ Id: listId2, Title: listTitle2 } = await genericCreateList(this.siteUrl, `TestList2_${Date.now()}`));
+    });
+
+    specify("get all lists", async function () {
+        const allLists = await GetLists(this.siteUrl);
+        assert.ok(Array.isArray(allLists), "Result should be an array");
+        assert.ok(allLists.length >= 2, "Should retrieve at least the two created lists");
+        const foundList1 = allLists.find(l => l.Id === listId1);
+        const foundList2 = allLists.find(l => l.Id === listId2);
+
+        assert.ok(foundList1, "Should find the first created list by its ID");
+        assert.strictEqual(foundList1.Title, listTitle1, "Title of the first list should match");
+
+        assert.ok(foundList2, "Should find the second created list by its ID");
+        assert.strictEqual(foundList2.Title, listTitle2, "Title of the second list should match");
     });
 });
 
@@ -175,7 +224,7 @@ describe("Fields", function () {
     let listId: string;
 
     before(async function () {
-        ({Id: listId} = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+        ({ Id: listId } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
     });
 
     describe("CreateField", function () {
@@ -226,7 +275,7 @@ describe("Fields", function () {
 
         specify("update field title", async function () {
             newTitle = `${fieldTitle}_Updated`;
-            const updated = await UpdateField(this.siteUrl, listId, fieldInternalName, {Title: newTitle});
+            const updated = await UpdateField(this.siteUrl, listId, fieldInternalName, { Title: newTitle });
             assert.strictEqual(updated.Title, newTitle, "Field title should be updated");
         });
 
@@ -574,8 +623,8 @@ describe("View Field Operations", function () {
     let listId: string, listTitle: string, viewId: string, fieldInternalName: string;
 
     before(async function () {
-        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));  
-        ({ InternalName: fieldInternalName }  = await genericCreateField(this.siteUrl, listId, `TestViewField_${Date.now()}`));
+        ({ Id: listId, Title: listTitle } = await genericCreateList(this.siteUrl, `TestList_${Date.now()}`));
+        ({ InternalName: fieldInternalName } = await genericCreateField(this.siteUrl, listId, `TestViewField_${Date.now()}`));
         const views = await GetListViews(this.siteUrl, listId, { includeViewFields: true });
         viewId = views[0].Id;
     });

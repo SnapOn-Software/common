@@ -4,7 +4,7 @@ import XMLHttpRequest from "xhr2"
 import * as rest from '../src/utils/rest';
 import { GetSiteId } from '../src/utils/sharepoint.rest/web';
 import { IRequestBody, IRestOptions } from "../src";
-import { DOMParser, DOMImplementation, XMLSerializer } from "xmldom";
+import { JSDOM } from 'jsdom';
 import assert from "assert";
 
 declare module "mocha" {
@@ -125,20 +125,30 @@ function patchWindow(url: string) {
 }
 
 function patchDOM() {
-    global.DOMParser = DOMParser;
-    const doc = new DOMImplementation().createDocument(null, null, null);
-    function DocumentConstructor() {
-        return doc;
-    }
-    DocumentConstructor.prototype = Object.getPrototypeOf(doc);
-    global.Document = DocumentConstructor as any;
-    const serializer = new XMLSerializer();
-    Object.defineProperty(Object.getPrototypeOf(doc.createElement("dummy")), "outerHTML", {
-        get() {
-            return serializer.serializeToString(this);
-        },
-        configurable: true
-    });
+    // global.DOMParser = DOMParser;
+    // const doc = new DOMImplementation().createDocument(null, null, null);
+    // function DocumentConstructor() {
+    //     return doc;
+    // }
+    // DocumentConstructor.prototype = Object.getPrototypeOf(doc);
+    // global.Document = DocumentConstructor as any;
+    // const serializer = new XMLSerializer();
+    // Object.defineProperty(Object.getPrototypeOf(doc.createElement("dummy")), "outerHTML", {
+    //     get() {
+    //         return serializer.serializeToString(this);
+    //     },
+    //     configurable: true
+    // });
+
+    // Use jsdom for full DOM API compatibility including querySelector
+    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+    // Set up global DOM objects
+    global.DOMParser = dom.window.DOMParser;
+    global.Document = dom.window.Document;
+    global.Element = dom.window.Element;
+    global.HTMLElement = dom.window.HTMLElement;
+    // You can also set up document if needed
+    global.document = dom.window.document;
 }
 
 function patchXHR(token?: string) {
@@ -148,7 +158,7 @@ function patchXHR(token?: string) {
 
     const originalOpen = proto.open;
     proto.open = function (method: string, url: string, ...args: any[]) {
-        // if no protocol (“http:”, “https:”, etc), assume relative
+        // if no protocol ("http:", "https:", etc), assume relative
         if (!/^[a-z][a-z\d+\-.]*:/.test(url)) {
             url = new URL(url, window.location.origin).href;
         }
