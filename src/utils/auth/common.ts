@@ -76,7 +76,7 @@ function _parseAndCacheGetSPFxClientAuthTokenResult(result: SPFxAuthToken, spfxT
                 minutes: 15
             };
 
-        setCacheItem(`access_token_${spfxTokenType}_${_spPageContextInfo.webId}`, result.access_token, expiration);
+        setCacheItem(`access_token_${spfxTokenType}`, result.access_token, expiration);
 
         return result.access_token;
     }
@@ -84,7 +84,7 @@ function _parseAndCacheGetSPFxClientAuthTokenResult(result: SPFxAuthToken, spfxT
 }
 
 function _getSPFxClientAuthTokenFromCache(spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
-    let cachedToken = getCacheItem<string>(`access_token_${spfxTokenType}_${_spPageContextInfo.webId}`);
+    let cachedToken = getCacheItem<string>(`access_token_${spfxTokenType}`);
     if (!isNullOrEmptyString(cachedToken)) {
         return cachedToken;
     }
