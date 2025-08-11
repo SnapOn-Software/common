@@ -91,6 +91,36 @@ function _getSPFxClientAuthTokenFromCache(spfxTokenType: SPFxAuthTokenType = SPF
     return null;
 }
 
+function _getSPFxClientAuthTokenFromMSALCache(resource: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
+    try {
+        let cachedToken: {
+            expiration: number;
+            value: string;
+        };
+
+        for (let key in localStorage) {
+            if (key.startsWith(`Identity.OAuth.${_spPageContextInfo.systemUserKey}`)
+                && key.indexOf(resource) !== -1) {
+                cachedToken = JSON.parse(localStorage.getItem(key));
+                break;
+            }
+        }
+
+        if (!isNullOrUndefined(cachedToken)) {
+            return _parseAndCacheGetSPFxClientAuthTokenResult({
+                access_token: cachedToken.value,
+                expires_on: cachedToken.expiration.toString(),
+                resource: resource,
+                scope: null,
+                token_type: "Bearer"
+            }, spfxTokenType);
+        }
+    } catch {
+    }
+
+    return null;
+}
+
 /** Acquire an authorization token for a Outlook, Graph, or SharePoint the same way SPFx clients do */
 export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     let cachedToken = _getSPFxClientAuthTokenFromCache(spfxTokenType);
@@ -100,29 +130,10 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
 
     if (spfxTokenType === SPFxAuthTokenType.Graph) {
         let resource = "https://graph.microsoft.com";
-        try {
-            let cachedToken: {
-                expiration: number;
-                value: string;
-            };
-            for (let key in localStorage) {
-                if (key.startsWith(`Identity.OAuth.${_spPageContextInfo.systemUserKey}`)
-                    && key.indexOf(resource) !== -1) {
-                    cachedToken = JSON.parse(localStorage.getItem(key));
-                    break;
-                }
-            }
 
-            if (!isNullOrUndefined(cachedToken)) {
-                return _parseAndCacheGetSPFxClientAuthTokenResult({
-                    access_token: cachedToken.value,
-                    expires_on: cachedToken.expiration.toString(),
-                    resource: resource,
-                    scope: null,
-                    token_type: "Bearer"
-                }, spfxTokenType);
-            }
-        } catch {
+        let token = _getSPFxClientAuthTokenFromMSALCache(resource, spfxTokenType);
+        if (!isNullOrEmptyString(token)) {
+            return token;
         }
 
         try {
@@ -276,13 +287,13 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
             }
         } catch {
         }
-    }
-
-    try {
-        let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
-        let result = await GetJson<SPFxAuthToken>(url, body, options);
-        return _parseAndCacheGetSPFxClientAuthTokenResult(result, spfxTokenType);
-    } catch {
+    } else {
+        try {
+            let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
+            let result = await GetJson<SPFxAuthToken>(url, body, options);
+            return _parseAndCacheGetSPFxClientAuthTokenResult(result, spfxTokenType);
+        } catch {
+        }
     }
 
     return null;
@@ -297,40 +308,21 @@ export function GetSPFxClientAuthTokenSync(siteUrl: string, spfxTokenType: SPFxA
 
     if (spfxTokenType === SPFxAuthTokenType.Graph) {
         let resource = "https://graph.microsoft.com";
-        try {
-            let cachedToken: {
-                expiration: number;
-                value: string;
-            };
-            for (let key in localStorage) {
-                if (key.startsWith(`Identity.OAuth.${_spPageContextInfo.systemUserKey}`)
-                    && key.indexOf(resource) !== -1) {
-                    cachedToken = JSON.parse(localStorage.getItem(key));
-                    break;
-                }
-            }
+        let token = _getSPFxClientAuthTokenFromMSALCache(resource, spfxTokenType);
 
-            if (!isNullOrUndefined(cachedToken)) {
-                return _parseAndCacheGetSPFxClientAuthTokenResult({
-                    access_token: cachedToken.value,
-                    expires_on: cachedToken.expiration.toString(),
-                    resource: resource,
-                    scope: null,
-                    token_type: "Bearer"
-                }, spfxTokenType);
-            }
-        } catch {
+        if (!isNullOrEmptyString(token)) {
+            return token;
         }
 
-        //cache it for next time sync request
+        // Cache it for next time using the async method
         GetSPFxClientAuthToken(siteUrl, spfxTokenType);
-    }
-
-    try {
-        let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
-        let response = GetJsonSync<SPFxAuthToken>(url, body, options);
-        return _parseAndCacheGetSPFxClientAuthTokenResult(response.result, spfxTokenType);
-    } catch {
+    } else {
+        try {
+            let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
+            let response = GetJsonSync<SPFxAuthToken>(url, body, options);
+            return _parseAndCacheGetSPFxClientAuthTokenResult(response.result, spfxTokenType);
+        } catch {
+        }
     }
 
     return null;
