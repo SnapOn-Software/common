@@ -251,13 +251,14 @@ export async function DeleteAttachment(siteUrl: string, listIdOrTitle: string, i
 
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/AttachmentFiles('${encodeURIComponentEX(filename, { singleQuoteMultiplier: 2 })}')`;
 
+    let result: { deleted: boolean; errorMessage?: string; } = { deleted: true };
     try {
-        let result = await GetJson<{ d: IAttachmentInfo; }>(url, null, { includeDigestInGet: true, includeDigestInPost: true, xHttpMethod: "DELETE" });
-        let attachmentFile = result && result.d;
-        return attachmentFile;
+        await GetJson<{ d: IAttachmentInfo; }>(url, null, { spWebUrl: siteUrl, method: "POST", xHttpMethod: "DELETE" });
     } catch (e) {
+        result.deleted = false;
+        result.errorMessage = __getSPRestErrorData(e).message;
     }
-    return null;
+    return result;
 }
 
 //** Update value of taxonomy multi-value field. See issue 7585 for more info */
