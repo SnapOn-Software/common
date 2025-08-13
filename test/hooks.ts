@@ -116,6 +116,7 @@ function patchWindow(url: string) {
     (global as any).window = {
         location: {
             protocol: u.protocol, // "https:"
+            hostname: u.hostname, // "{tenantName}.sharepoint.com"
             host: u.host,         // "{tenantName}.sharepoint.com"
             origin: u.origin,     // "https://{tenantName}.sharepoint.com"
             pathname: u.pathname, // "/sites/kwiz_common_integration_tests_..."
@@ -125,29 +126,11 @@ function patchWindow(url: string) {
 }
 
 function patchDOM() {
-    // global.DOMParser = DOMParser;
-    // const doc = new DOMImplementation().createDocument(null, null, null);
-    // function DocumentConstructor() {
-    //     return doc;
-    // }
-    // DocumentConstructor.prototype = Object.getPrototypeOf(doc);
-    // global.Document = DocumentConstructor as any;
-    // const serializer = new XMLSerializer();
-    // Object.defineProperty(Object.getPrototypeOf(doc.createElement("dummy")), "outerHTML", {
-    //     get() {
-    //         return serializer.serializeToString(this);
-    //     },
-    //     configurable: true
-    // });
-
-    // Use jsdom for full DOM API compatibility including querySelector
     const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-    // Set up global DOM objects
     global.DOMParser = dom.window.DOMParser;
     global.Document = dom.window.Document;
     global.Element = dom.window.Element;
     global.HTMLElement = dom.window.HTMLElement;
-    // You can also set up document if needed
     global.document = dom.window.document;
 }
 
