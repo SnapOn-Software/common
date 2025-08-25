@@ -2,7 +2,7 @@ name: Node.js Integration Test
 
 on:
   push:
-    branches: [ main, integration-tests ]
+    branches: [ main ]
 
 jobs:
   integration-test:
