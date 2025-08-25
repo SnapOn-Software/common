@@ -1,8 +1,9 @@
 import {ConfidentialClientApplication, Configuration} from "@azure/msal-node";
 import assert from "assert";
 
-assert(process.env.clientId, "clientId must be set in .env");
+assert(process.env.tenantName, "tenantName must be set in .env");
 assert(process.env.tenantId, "tenantId must be set in .env");
+assert(process.env.clientId, "clientId must be set in .env");
 assert(process.env.clientCertificateThumbprint, "clientCertificateThumbprint must be set in .env");
 assert(process.env.clientKey, "clientKey must be set in .env");
 
