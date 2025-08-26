@@ -809,12 +809,12 @@ export function isAppWebSync() {
 }
 
 export async function isSPPageContextInfoReady() {
-    const contextReady = await waitForWindowObject("_spPageContextInfo", 333);
+    const contextReady = await waitForWindowObject("_spPageContextInfo", null, 333);
 
     if (contextReady !== true) {
         let pageAsJson = await GetPageAsJson();
         if (!isNullOrUndefined(pageAsJson) && !isNullOrUndefined(pageAsJson.spPageContextInfo)) {
-            window["_spPageContextInfo"] = pageAsJson.spPageContextInfo;
+            globalThis["_spPageContextInfo"] = pageAsJson.spPageContextInfo;
         }
     }
 
