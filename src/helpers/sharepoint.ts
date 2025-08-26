@@ -851,15 +851,23 @@ export function isExternalUser(loginName: string) {
 
 function expandPageContext() {
     logger.groupSync("expandPageContext", log => {
+        if((_spPageContextInfo as any)["_hasExpandPageContext"] === true){
+            return;
+        }
+
         const ctx = _spPageContextInfo;
+        (ctx as any)["_hasExpandPageContext"] = true;
+
         if (isNullOrUndefined(ctx.siteId)) {
             log("GetSiteIdSync");
             ctx.siteId = GetSiteIdSync(ctx.siteServerRelativeUrl);
         }
+
         if (isNullOrEmptyString(ctx.webId)) {
             log("GetWebIdSync");
             ctx.webId = GetWebIdSync(ctx.webServerRelativeUrl);
         }
+
         if (isNullOrUndefined(ctx.hasManageWebPermissions) && !isNullOrUndefined(ctx.webPermMasks)) {
             log("hasManageWebPermissions");
             let webPerms = new SPBasePermissions(_spPageContextInfo.webPermMasks);
@@ -870,12 +878,14 @@ function expandPageContext() {
             log("ctx.listId");
             ctx.listId = ctx.pageListId;
         }
+        
         if (isNotEmptyString(ctx.listId)) {
             //has list
             if (isNullOrEmptyString(ctx.listUrl)) {
                 log("GetListRootFolderSync");
                 ctx.listUrl = GetListRootFolderSync(ctx.webServerRelativeUrl, ctx.listId).ServerRelativeUrl;
             }
+
             if (isNullOrNaN(ctx.listBaseTemplate)) {
                 log("GetListSync");
                 const list = GetListSync(ctx.webServerRelativeUrl, ctx.listId);
@@ -911,6 +921,7 @@ function expandPageContext() {
                 ctx.userEmail = user.Email;
                 ctx.userDisplayName = user.Title;
             }
+
             log({ label: "expanded", value: ctx });
         }
     });
