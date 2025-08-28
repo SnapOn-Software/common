@@ -1,6 +1,7 @@
 import { firstOrNull } from "../../helpers/collections.base";
 import { getUniqueId } from "../../helpers/random";
-import { isNullOrEmptyString, isNullOrUndefined, isNumber } from "../../helpers/typecheckers";
+import { isSPPageContextInfoReady, isSPPageContextInfoReadySync } from "../../helpers/sharepoint";
+import { isNullOrEmptyString, isNullOrUndefined, isNumber, isTypeofFullNameNullOrUndefined } from "../../helpers/typecheckers";
 import { SPFxAuthToken, SPFxAuthTokenType } from "../../types/auth";
 import { IRestOptions } from "../../types/rest.types";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
@@ -125,6 +126,12 @@ function _getSPFxClientAuthTokenFromMSALCache(resource: string, spfxTokenType: S
 
 /** Acquire an authorization token for a Outlook, Graph, or SharePoint the same way SPFx clients do */
 export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
+    await isSPPageContextInfoReady();
+
+    if (isTypeofFullNameNullOrUndefined("_spPageContextInfo") || _spPageContextInfo.isSPO !== true || _spPageContextInfo.isAppWeb === true) {
+        return null;
+    }
+
     let cachedToken = _getSPFxClientAuthTokenFromCache(spfxTokenType);
     if (!isNullOrEmptyString(cachedToken)) {
         return cachedToken;
@@ -253,7 +260,7 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
                                     reject();
                                 }
 
-                                document.removeChild(iframe);
+                                document.body.removeChild(iframe);
                             }, 100)
                         };
 
@@ -303,6 +310,12 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
 
 /** Acquire an authorization token for a Outlook, Graph, or SharePoint the same way SPFx clients do */
 export function GetSPFxClientAuthTokenSync(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
+    isSPPageContextInfoReadySync();
+
+    if (isTypeofFullNameNullOrUndefined("_spPageContextInfo") || _spPageContextInfo.isSPO !== true || _spPageContextInfo.isAppWeb === true) {
+        return null;
+    }
+
     let cachedToken = _getSPFxClientAuthTokenFromCache(spfxTokenType);
     if (!isNullOrEmptyString(cachedToken)) {
         return cachedToken;

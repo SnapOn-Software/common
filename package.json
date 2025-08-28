@@ -1,6 +1,6 @@
 {
     "name": "@kwiz/common",
-    "version": "1.0.146",
+    "version": "1.0.150",
     "description": "KWIZ common utilities and helpers for M365 platform",
     "main": "lib/cjs/index.js",
     "module": "lib/esm/index.js",
@@ -71,7 +71,7 @@
         "@azure/msal-node": "^3.5.3",
         "@types/jsdom": "^21.1.7",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.15.18",
+        "@types/node": "^24.1.0",
         "create-ts-index": "^1.14.0",
         "dotenv": "^16.5.0",
         "fs-extra": "^11.2.0",
