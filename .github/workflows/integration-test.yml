@@ -1,0 +1,24 @@
+name: Node.js Integration Test
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm run test
+        env:
+          tenantName: ${{ secrets.TENANT_NAME }}
+          tenantId: ${{ secrets.TENANT_ID }}
+          clientId: ${{ secrets.CLIENT_ID }}
+          clientCertificateThumbprint: ${{ secrets.CLIENT_CERTIFICATE_THUMBPRINT }}
+          tempSiteOwner: ${{ secrets.TEMP_SITE_OWNER }}
+          tempSiteUrl: ${{ secrets.TEMP_SITE_URL }}
+          clientKey: ${{ secrets.CLIENT_KEY }}

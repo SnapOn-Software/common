@@ -85,9 +85,11 @@ function _parseAndCacheGetSPFxClientAuthTokenResult(result: SPFxAuthToken, spfxT
 }
 
 function _getSPFxClientAuthTokenFromCache(spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
-    let cachedToken = getCacheItem<string>(`access_token_${spfxTokenType}`);
-    if (!isNullOrEmptyString(cachedToken)) {
-        return cachedToken;
+    if (hasGlobalContext()) {
+        let cachedToken = getCacheItem<string>(`access_token_${spfxTokenType}`);
+        if (!isNullOrEmptyString(cachedToken)) {
+            return cachedToken;
+        }
     }
     return null;
 }
