@@ -11,7 +11,7 @@ import { BaseTypes, FieldTypeAsString, FieldTypes, IFieldInfo, IFieldInfoEX, IFi
 import { GeListItemsFoldersBehaviour, IListWorkflowAssociation, IRestItem, ListExperienceOptions, iContentType, iList, iListVersionSettings, iListView } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, longLocalCache, shortLocalCache } from "../rest";
-import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT } from "./common";
+import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, __getSPRestErrorData } from "./common";
 import { __fixGetListItemsResults } from "./listutils/common";
 import { GetContentTypes, GetContentTypesSync, GetListsSync, IGetContentTypesOptions } from "./web";
 
@@ -1356,6 +1356,53 @@ export async function CreateList(siteUrl: string, info: {
     let newList = (await GetJson<{ d: iCreateListResult }>(url, jsonStringify(body))).d;
     normalizeGuid(newList.Id);
     return newList;
+}
+
+export async function RecycleList(siteUrl: string, listIdOrTitle: string): Promise<{ recycled: boolean; errorMessage?: string}> {
+    siteUrl = GetSiteUrl(siteUrl);
+    const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/recycle()`;
+    const result: { recycled: boolean; errorMessage?: string; } = { recycled: true };
+
+    try {
+        await GetJson<{ d: {Recycle: string; } }>(
+            url, null,
+            {
+                method: "POST",
+                allowCache: false,
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl
+            }
+        );
+    } catch (e) {
+        result.recycled = false;
+        result.errorMessage = __getSPRestErrorData(e).message;
+    }
+
+    return result;
+}
+
+export async function DeleteList(siteUrl: string, listIdOrTitle: string): Promise<{ deleted: boolean; errorMessage?: string }> {
+    siteUrl = GetSiteUrl(siteUrl);
+    const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/deleteObject`;
+    const result: { deleted: boolean; errorMessage?: string } = { deleted: true };
+
+    try {
+        await GetJson(
+            url, null,
+            {
+                method: "POST",
+                xHttpMethod: "DELETE",
+                allowCache: false,
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl
+            }
+        );
+    } catch (e) {
+        result.deleted = false;
+        result.errorMessage = __getSPRestErrorData(e).message;
+    }
+
+    return result;
 }
 
 export async function SearchList(siteUrl: string, listIdOrTitle: string, query: string) {
