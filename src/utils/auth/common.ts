@@ -6,7 +6,7 @@ import { SPFxAuthToken, SPFxAuthTokenType } from "../../types/auth";
 import { IRestOptions } from "../../types/rest.types";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { GetJson, GetJsonSync } from "../rest";
-import { GetRestBaseUrl } from "../sharepoint.rest/common";
+import { GetRestBaseUrl, hasGlobalContext } from "../sharepoint.rest/common";
 
 export function GetTokenAudiencePrefix(appId: string) {
     return `api://${appId}`;
@@ -70,7 +70,7 @@ function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAu
 }
 
 function _parseAndCacheGetSPFxClientAuthTokenResult(result: SPFxAuthToken, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
-    if (!isNullOrUndefined(result) && !isNullOrEmptyString(result.access_token)) {
+    if (hasGlobalContext() && !isNullOrUndefined(result) && !isNullOrEmptyString(result.access_token)) {
         let expiration = isNumber(result.expires_on) ?
             new Date(result.expires_on * 1000) :
             {

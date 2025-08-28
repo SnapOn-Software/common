@@ -10,7 +10,7 @@ import { IRestItem } from "../../types/sharepoint.utils.types";
 import { LocaleKnownScript } from "../../utils/knownscript";
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, shortLocalCache } from "../rest";
-import { GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate } from "./common";
+import { GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate, hasGlobalContext } from "./common";
 import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./list";
 import { GetUser, GetUserSync } from "./user";
 
@@ -423,7 +423,7 @@ export function GetSPFieldValueAsText(value: any, field: IFieldInfoEX): string[]
         rawValues.forEach(raw => {
             if (isNullOrEmptyString(raw)) {/** skip */ }
             else if (isNumber(raw))
-                if (isUser) {
+                if (isUser && hasGlobalContext()) {
                     //todo - try not sync...
                     try {
                         let userInfo = GetUserSync(_spPageContextInfo.siteServerRelativeUrl, raw);
