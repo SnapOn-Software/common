@@ -174,7 +174,7 @@ function rhex(n) {
     return s;
 }
 
-function hex(x) {
+function hex(x: any[]): string {
     for (var i = 0; i < x.length; i++)
         x[i] = rhex(x[i]);
     return x.join('');
@@ -187,4 +187,9 @@ if (md5('hello') !== '5d41402abc4b2a76b9719d911017c592') {
             msw = (x >> 16) + (y >> 16) + (lsw >> 16);
         return (msw << 16) | (lsw & 0xFFFF);
     };
+}
+
+//while testing exports hex, rhex, cmn
+if (process.env.NODE_ENV === 'test') {
+    module.exports = { hex, rhex, cmn };
 }
