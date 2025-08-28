@@ -23,7 +23,7 @@ export function typeofFullName(fullName: string, windowOrParent?: Window | any) 
             obj = obj[names[i]];
             if (typeof obj === _objectTypes.Undefined)
                 return _objectTypes.Undefined;
-            if (obj === null && i < len)//one of the chained objects (not the leaf) is null - so return undefined
+            if (obj === null && i < len - 1)//one of the chained objects (not the leaf) is null - so return undefined
                 return _objectTypes.Undefined;
         }
         return typeof obj;

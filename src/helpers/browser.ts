@@ -783,7 +783,7 @@ export function setSelectOptionByValue(selectElement: HTMLSelectElement, value: 
 }
 
 export function setSelectOptionByIndex(selectElement: HTMLSelectElement, index: number): HTMLOptionElement {
-    if (isNullOrUndefined(selectElement) || isNumeric(index)) {
+    if (isNullOrUndefined(selectElement) || !isNumeric(index)) {
         return null;
     }
 
@@ -1029,7 +1029,7 @@ export function HTMLDecode(a) {
     var e = [/&lt;/g, /&gt;/g, /&quot;/g, /&#39;/g, /&#58;/g, /&#123;/g, /&#125;/g, /&amp;/g];
     var f = ["<", ">", '"', "'", ":", "{", "}", "&"];
     var d: string[] = [];
-    for (var c = 0; c < a.length; c++) {
+    for (var c = 0; c < e.length; c++) {
         var b = a.indexOf("&");
         if (b !== -1) {
             if (b > 0) {
