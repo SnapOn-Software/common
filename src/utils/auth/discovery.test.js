@@ -5,6 +5,7 @@ import { isValidGuid } from '../../helpers/typecheckers';
 import { DiscoverTenantInfo } from './discovery';
 
 test('DiscoverTenantInfo', async t => {
+    t.test("Skipping DiscoverTenantInfo", t => true);
     global.XMLHttpRequest = require('xhr2');
     let info = await DiscoverTenantInfo("kwizcomdev.sharepoint.com");
     await t.test("response not null/undefined", t => assert.notDeepEqual(info, null) && assert.notDeepEqual(info, undefined));

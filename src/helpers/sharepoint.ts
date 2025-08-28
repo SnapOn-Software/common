@@ -1,6 +1,12 @@
 import { IDictionary } from "../types/common.types";
 import { FieldTypeAsString, FieldTypes, IFieldCalculatedInfo, IFieldInfo, IFieldInfoEX, IFieldJsonSchema, IFieldTaxonomyInfo, PrincipalType, RententionLabelFieldValueType, SPBasePermissionKind, ThumbnailValueType, UrlValueType } from "../types/sharepoint.types";
 import { UserEntityValueType } from "../types/sharepoint.utils.types";
+import { ConsoleLogger } from "../utils/consolelogger";
+import { getCacheItem, setCacheItem } from "../utils/localstoragecache";
+import { GetJson, GetJsonSync, longLocalCache } from "../utils/rest";
+import { GetListRootFolderSync, GetListSync, GetListViewsSync } from "../utils/sharepoint.rest/list";
+import { GetCurrentUserSync } from "../utils/sharepoint.rest/user";
+import { GetSiteIdSync, GetWebIdSync } from "../utils/sharepoint.rest/web";
 import { isElement, waitFor, waitForWindowObject } from "./browser";
 import { firstOrNull, forEach } from "./collections.base";
 import { deleteCookie, getCookie, setCookie } from "./cookies";
@@ -8,8 +14,8 @@ import { isValidEmail } from "./emails";
 import { jsonParse } from "./json";
 import { hasOwnProperty } from "./objects";
 import { isValidDomainLogin, normalizeGuid } from "./strings";
-import { isNotEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumber, isNumeric, isString, isTypeofFullNameFunction, isTypeofFullNameNullOrUndefined, isTypeofFullNameUndefined, isUndefined, isValidGuid } from "./typecheckers";
-import { makeServerRelativeUrl, normalizeUrl } from "./url";
+import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumber, isNumeric, isString, isTypeofFullNameFunction, isTypeofFullNameNullOrUndefined, isTypeofFullNameUndefined, isUndefined, isValidGuid } from "./typecheckers";
+import { getQueryStringParameter, makeServerRelativeUrl, normalizeUrl } from "./url";
 
 export const KWIZ_CONTROLLER_FIELD_NAME = "kwizcomcontrollerfield";
 const MODERN_EXPERIENCE_COOKIE_NAME = "splnu";
@@ -17,7 +23,7 @@ const MODERN_EXPERIENCE_TEMP_COOKIE_NAME = `${MODERN_EXPERIENCE_COOKIE_NAME}_kwi
 const MOBILE_EXPERIENCE_COOKIE_NAME = "mobile";
 const MOBILE_EXPERIENCE_TEMP_COOKIE_NAME = `${MOBILE_EXPERIENCE_COOKIE_NAME}_kwizcom_original`;
 
-//const logger = ConsoleLogger.get("_modules/helpers/sharepoint");
+const logger = ConsoleLogger.get("_modules/helpers/sharepoint");
 export function IsClassicPage() {
     if (!isTypeofFullNameUndefined("_spClientSideComponentIds")) {
         //only modern pages have the _spClientSideComponentIds object created on the page inline, not a in script that 
@@ -168,8 +174,10 @@ export function NormalizeListName(list: { EntityTypeName: string; BaseType: numb
 export class SPBasePermissions {
     private $High = 0;
     private $Low = 0;
-    public constructor(EffectiveBasePermissions: { High: number; Low: number; }) {
-        this.initPropertiesFromJson(EffectiveBasePermissions);
+    public constructor(EffectiveBasePermissions: SPBasePermissionKind | { High: number; Low: number; }) {
+        if (!isNullOrUndefined((EffectiveBasePermissions as any).High))
+            this.initPropertiesFromJson((EffectiveBasePermissions as { High: number; Low: number; }));
+        else this.set(EffectiveBasePermissions as SPBasePermissionKind);
     }
     public set(perm: SPBasePermissionKind) {
         if (perm === SPBasePermissionKind.FullMask) {
@@ -274,6 +282,9 @@ export class SPBasePermissions {
         if (!isNullOrNaN(EffectiveBasePermissions.Low)) {
             this.$Low = EffectiveBasePermissions.Low;
         }
+    }
+    public toJson() {
+        return { High: this.$High, Low: this.$Low };
     }
 }
 
@@ -732,35 +743,49 @@ export function isNumberFieldType(fieldInfo: IFieldInfoEX) {
 }
 
 export async function isSharePointOnline() {
-    let url = new URL(window.location.href);
-    //Most cases are satisfied by this check. Very few customers have custom domains for SharePoint online.
-    if (url.host.toLowerCase().endsWith(".sharepoint.com")) {
+    if (isSPOCommonUrl() === true
+        || isSPOCachedURL() === true
+        || (!isTypeofFullNameNullOrUndefined("_spPageContextInfo") && _spPageContextInfo.isSPO === true)) {
         return true;
     }
 
-    let contextReady = await waitFor(() => {
-        return !isTypeofFullNameUndefined("_spPageContextInfo");
-    });
+    // Can be an expensive call
+    await isSPPageContextInfoReady();
 
-    if (contextReady) {
-        return _spPageContextInfo.isSPO === true;
-    }
-
-    return false;
+    return getAndCacheIsSharePointOnlineResult();
 }
 
 export function isSharePointOnlineSync() {
+    if (isSPOCommonUrl() === true
+        || isSPOCachedURL() === true
+        || (!isTypeofFullNameNullOrUndefined("_spPageContextInfo") && _spPageContextInfo.isSPO === true)) {
+        return true;
+    }
+
+    // Can be an expensive call
+    isSPPageContextInfoReadySync();
+
+    return getAndCacheIsSharePointOnlineResult();
+}
+
+function isSPOCommonUrl() {
     let url = new URL(window.location.href);
     //Most cases are satisfied by this check. Very few customers have custom domains for SharePoint online.
     if (url.host.toLowerCase().endsWith(".sharepoint.com")) {
         return true;
     }
-
-    if (!isTypeofFullNameUndefined("_spPageContextInfo")) {
-        return _spPageContextInfo.isSPO === true;
-    }
-
     return false;
+}
+
+function isSPOCachedURL() {
+    let isSPO = getCacheItem<boolean>(`${window.location.host}_isSPO`);
+    return isSPO === true;
+}
+
+function getAndCacheIsSharePointOnlineResult() {
+    let isSPO = !isTypeofFullNameUndefined("_spPageContextInfo") && _spPageContextInfo.isSPO === true;
+    setCacheItem(`${window.location.host}_isSPO`, isSPO === true, { days: 365 });
+    return isSPO === true;
 }
 
 export async function isAppWeb() {
@@ -784,14 +809,164 @@ export function isAppWebSync() {
 }
 
 export async function isSPPageContextInfoReady() {
-    return await waitForWindowObject("_spPageContextInfo");
+    const contextReady = await waitForWindowObject("_spPageContextInfo", null, 333);
+
+    if (contextReady !== true) {
+        let pageAsJson = await GetPageAsJson();
+        if (!isNullOrUndefined(pageAsJson) && !isNullOrUndefined(pageAsJson.spPageContextInfo)) {
+            globalThis["_spPageContextInfo"] = pageAsJson.spPageContextInfo;
+        }
+    }
+
+    if (!isTypeofFullNameNullOrUndefined("_spPageContextInfo")) {
+        expandPageContext();
+        return true;
+    }
+
+    return false;
 }
 
-export function isSPPageContextInfoReadySync() {
-    return !isTypeofFullNameNullOrUndefined("_spPageContextInfo");
+export function isSPPageContextInfoReadySync() {    
+    const contextReady = !isTypeofFullNameNullOrUndefined("_spPageContextInfo");
+
+    if (contextReady !== true) {
+        let pageAsJson = GetPageAsJsonSync();
+        if (!isNullOrUndefined(pageAsJson) && !isNullOrUndefined(pageAsJson.spPageContextInfo)) {
+            window["_spPageContextInfo"] = pageAsJson.spPageContextInfo;
+        }
+    }
+
+    if (!isTypeofFullNameNullOrUndefined("_spPageContextInfo")) {
+        expandPageContext();
+        return true;
+    }
+
+    return false;
 }
 
 export function isExternalUser(loginName: string) {
     if (isNullOrEmptyString(loginName)) return false;
     return loginName.indexOf("#ext#@") >= 0;
+}
+
+function expandPageContext() {
+    logger.groupSync("expandPageContext", log => {
+        if((_spPageContextInfo as any)["_hasExpandPageContext"] === true){
+            return;
+        }
+
+        const ctx = _spPageContextInfo;
+        (ctx as any)["_hasExpandPageContext"] = true;
+
+        if (isNullOrUndefined(ctx.siteId)) {
+            log("GetSiteIdSync");
+            ctx.siteId = GetSiteIdSync(ctx.siteServerRelativeUrl);
+        }
+
+        if (isNullOrEmptyString(ctx.webId)) {
+            log("GetWebIdSync");
+            ctx.webId = GetWebIdSync(ctx.webServerRelativeUrl);
+        }
+
+        if (isNullOrUndefined(ctx.hasManageWebPermissions) && !isNullOrUndefined(ctx.webPermMasks)) {
+            log("hasManageWebPermissions");
+            let webPerms = new SPBasePermissions(_spPageContextInfo.webPermMasks);
+            ctx.hasManageWebPermissions = webPerms.has(SPBasePermissionKind.ManageWeb);
+        }
+
+        if (isNullOrEmptyString(ctx.listId)) {
+            log("ctx.listId");
+            ctx.listId = ctx.pageListId;
+        }
+        
+        if (isNotEmptyString(ctx.listId)) {
+            //has list
+            if (isNullOrEmptyString(ctx.listUrl)) {
+                log("GetListRootFolderSync");
+                ctx.listUrl = GetListRootFolderSync(ctx.webServerRelativeUrl, ctx.listId).ServerRelativeUrl;
+            }
+
+            if (isNullOrNaN(ctx.listBaseTemplate)) {
+                log("GetListSync");
+                const list = GetListSync(ctx.webServerRelativeUrl, ctx.listId);
+                ctx.listTitle = list.Title;
+                ctx.listBaseTemplate = list.BaseTemplate;
+                //ctx.listBaseType = list.BaseType;
+                ctx.listPermsMask = list.EffectiveBasePermissions;
+            }
+
+            if (isNullOrUndefined(ctx.pageItemId)) {
+                log("ctx.pageItemId");
+                let idParam = getQueryStringParameter("ID");
+                if (isNotEmptyString(idParam) && isNumeric(idParam)) {
+                    ctx.pageItemId = Number(idParam);
+                }
+            }
+
+            if (isNullOrNaN(ctx.pageItemId)) {
+                //no item, in a view
+                if (isNullOrUndefined(ctx.viewId)) {
+                    log("GetListViewsSync");
+                    const viewEndsWith = window.location.pathname.substr(window.location.pathname.lastIndexOf("/")).toLowerCase();
+                    const views = GetListViewsSync(ctx.webServerRelativeUrl, ctx.listId);
+                    const view = firstOrNull(views, v => v.ServerRelativeUrl.toLowerCase().endsWith(viewEndsWith));
+                    if (view)
+                        ctx.viewId = view.Id;
+                }
+            }
+
+            if (isNullOrEmptyString(ctx.userEmail)) {
+                log("GetCurrentUserSync");
+                const user = GetCurrentUserSync(ctx.webServerRelativeUrl);
+                ctx.userEmail = user.Email;
+                ctx.userDisplayName = user.Title;
+            }
+
+            log({ label: "expanded", value: ctx });
+        }
+    });
+}
+
+function _getPageAsJsonRequestParams(url?: string) {
+    if (isNullOrEmptyString(url)) {
+        url = window.location.pathname;
+    }
+
+    return [
+        `${url}?as=json`,
+        null,
+        {
+            ...longLocalCache,
+            headers: {
+                "Content-Type": "application/json;charset=utf-8",
+                "ACCEPT": "application/json; odata.metadata=minimal",
+                "ODATA-VERSION": "4.0"
+            }
+        }
+    ] as Parameters<typeof GetJson>;
+}
+export async function GetPageAsJson(url?: string) {
+    try {
+        let response = await GetJson<{
+            spPageContextInfo: typeof _spPageContextInfo
+        }>(..._getPageAsJsonRequestParams(url));
+
+        return response;
+    } catch {
+    }
+
+    return null;
+}
+
+export function GetPageAsJsonSync(url?: string) {
+    try {
+        let response = GetJsonSync<{
+            spPageContextInfo: typeof _spPageContextInfo
+        }>(..._getPageAsJsonRequestParams(url));
+
+        return response.success === true ? response.result : null;
+    } catch {
+    }
+
+    return null;
 }

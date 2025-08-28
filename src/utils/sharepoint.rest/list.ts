@@ -1,6 +1,6 @@
-import { __getSPRestErrorData, jsonClone } from "../../exports-index";
 import { PushNoDuplicate, firstOrNull, makeUniqueArray, toHash } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
+import { jsonClone } from "../../helpers/objects";
 import { NormalizeListName, SPBasePermissions, SchemaJsonToXml, SchemaXmlToJson, extendFieldInfos } from "../../helpers/sharepoint";
 import { normalizeGuid } from "../../helpers/strings";
 import { SafeIfElse, isBoolean, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrUndefined, isNumber, isPromise, isString, isValidGuid } from "../../helpers/typecheckers";
@@ -11,7 +11,7 @@ import { BaseTypes, FieldTypeAsString, FieldTypes, IFieldInfo, IFieldInfoEX, IFi
 import { GeListItemsFoldersBehaviour, IListWorkflowAssociation, IRestItem, ListExperienceOptions, iContentType, iList, iListVersionSettings, iListView } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, longLocalCache, shortLocalCache } from "../rest";
-import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT } from "./common";
+import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, __getSPRestErrorData } from "./common";
 import { __fixGetListItemsResults } from "./listutils/common";
 import { GetContentTypes, GetContentTypesSync, GetListsSync, IGetContentTypesOptions } from "./web";
 
