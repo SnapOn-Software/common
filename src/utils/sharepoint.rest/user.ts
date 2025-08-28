@@ -1,6 +1,7 @@
-import { filterEmptyEntries, firstOrNull, lastOrNull, normalizeGuid } from "../../exports-index";
+import { filterEmptyEntries, firstOrNull, lastOrNull } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
 import { ISPPeoplePickerControlFormEntity, IsSPPeoplePickerControlFormEntity, getPrincipalTypeFromPickerEntity, isExternalUser } from "../../helpers/sharepoint";
+import { normalizeGuid } from "../../helpers/strings";
 import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumber } from "../../helpers/typecheckers";
 import { encodeURIComponentEX } from "../../helpers/url";
 import { contentTypes, jsonTypes } from "../../types/rest.types";

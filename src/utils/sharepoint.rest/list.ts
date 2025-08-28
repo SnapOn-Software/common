@@ -1,6 +1,6 @@
-import { jsonClone } from "../../exports-index";
 import { PushNoDuplicate, firstOrNull, makeUniqueArray, toHash } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
+import { jsonClone } from "../../helpers/objects";
 import { NormalizeListName, SPBasePermissions, SchemaJsonToXml, SchemaXmlToJson, extendFieldInfos } from "../../helpers/sharepoint";
 import { normalizeGuid } from "../../helpers/strings";
 import { SafeIfElse, isBoolean, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrUndefined, isNumber, isPromise, isString, isValidGuid } from "../../helpers/typecheckers";

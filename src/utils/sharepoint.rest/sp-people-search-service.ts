@@ -1,9 +1,11 @@
-import { GetSiteUrl, isNullOrEmptyString, isString, makeFullUrl, normalizeUrl } from "../../exports-index";
 import { firstIndexOf } from "../../helpers/collections.base";
+import { isNullOrEmptyString, isString } from "../../helpers/typecheckers";
+import { makeFullUrl, normalizeUrl } from "../../helpers/url";
 import { contentTypes, jsonTypes } from "../../types/rest.types";
 import { PrincipalType } from "../../types/sharepoint.types";
 import { IUserInfo } from "../../types/sharepoint.utils.types";
 import { GetJson } from "../rest";
+import { GetSiteUrl } from "./common";
 import { EnsureUser } from "./user";
 
 export interface iPeoplePickerUserItem {
@@ -193,7 +195,7 @@ export class SPPeopleSearchService {
                 baseUrl = makeFullUrl(GetSiteUrl(siteUrl));
             }
             baseUrl = normalizeUrl(baseUrl);
-            
+
             const userRequestUrl: string = `${baseUrl}/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.clientPeoplePickerSearchUser`;
             const searchBody = {
                 queryParams: {

@@ -1,7 +1,8 @@
-import { isISODate, promiseLock } from "../../exports-index";
 import { sortArray } from "../../helpers/collections.base";
+import { isISODate } from "../../helpers/date";
 import { jsonStringify } from "../../helpers/json";
 import { getGlobal } from "../../helpers/objects";
+import { promiseLock } from "../../helpers/promises";
 import { SPBasePermissions, extendFieldInfo } from "../../helpers/sharepoint";
 import { normalizeGuid } from "../../helpers/strings";
 import { isDate, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumeric, isString, isTypeofFullNameNullOrUndefined, isValidGuid } from "../../helpers/typecheckers";
@@ -297,6 +298,7 @@ export function GetContentTypesSync(siteUrl: string, options: IGetContentTypesOp
 interface IGetListsOptions {
     includeRootFolders?: boolean;
     includeViews?: boolean;
+    allowCache?: boolean;
 }
 
 function _getListsRequestUrl(siteUrl: string, options: IGetListsOptions) {
@@ -339,8 +341,8 @@ function _postProcessGetLists(lists: iList[], options: Omit<IGetListsOptions, "i
 
 export function GetLists(siteUrl: string, options: IGetListsOptions = {}): Promise<iList[]> {
     let url = _getListsRequestUrl(siteUrl, options);
-
-    return GetJson<{ value: iList[]; }>(url, null, { allowCache: true, jsonMetadata: jsonTypes.nometadata })
+    const allowCache = options.allowCache === undefined ? true : options.allowCache;
+    return GetJson<{ value: iList[]; }>(url, null, { allowCache, jsonMetadata: jsonTypes.nometadata })
         .then(result => {
             return _postProcessGetLists(result.value, options);
         })
@@ -1083,7 +1085,7 @@ function _parseCustomActionReponse(action: IUserCustomActionInfo) {
         return action;
     }
 
-    if (!isNullOrUndefined(action.Rights)) {
+    if (!isNullOrUndefined(action.Rights) && !isString(action.Rights)) {
         if (isNumeric(action.Rights.High)) {
             action.Rights.High = Number(action.Rights.High)
         }
@@ -1100,7 +1102,7 @@ function _convertCustomActionToPostData(action: Omit<Partial<IUserCustomActionIn
     //a list are stored using numbers.
     let hasRights = !isNullOrUndefined(action.Rights);
     let partialAction: {
-        Rights: {
+        Rights: string | {
             High: string;
             Low: string;
         };
