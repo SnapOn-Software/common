@@ -1022,27 +1022,18 @@ export function HTMLEncode(d: string) {
     return result.join("");
 }
 
-export function HTMLDecode(a) {
-    if (isNullOrEmptyString(a)) {
+export function HTMLDecode(text: string) {
+    if (text === null || text === "") {
         return "";
     }
-    var e = [/&lt;/g, /&gt;/g, /&quot;/g, /&#39;/g, /&#58;/g, /&#123;/g, /&#125;/g, /&amp;/g];
-    var f = ["<", ">", '"', "'", ":", "{", "}", "&"];
-    var d: string[] = [];
-    for (var c = 0; c < e.length; c++) {
-        var b = a.indexOf("&");
-        if (b !== -1) {
-            if (b > 0) {
-                d.push(a.substr(0, b));
-                a = a.substr(b);
-            }
-            a = a.replace(e[c], f[c]);
-        } else {
-            break;
-        }
+
+    let entities = [/&lt;/g, /&gt;/g, /&quot;/g, /&#39;/g, /&#58;/g, /&#123;/g, /&#125;/g, /&amp;/g];
+    let decodedValues = ["<", ">", '"', "'", ":", "{", "}", "&"];
+
+    for (let c = 0; c < entities.length; c++) {
+        text = text.replace(entities[c], decodedValues[c]);
     }
-    d.push(a);
-    return d.join("");
+    return text;
 }
 
 export function ScriptEncode(e) {
