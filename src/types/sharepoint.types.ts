@@ -975,14 +975,6 @@ export interface ISpfxBaseComponentContext {
     };
 }
 
-export interface ISettingsFormContext {
-    webUrl: string;
-    /** if we are configuring a specific list, this will have the list ID */
-    listId?: string;
-    /** context as we get it from the SPFx control */
-    spfx: ISpfxBaseComponentContext;
-}
-
 // eslint-disable-next-line no-shadow
 export enum MissingOptionsType {
     /** No missing options */
@@ -991,26 +983,6 @@ export enum MissingOptionsType {
     MissingOptional = 1,
     /** Required missing options, cannot render until these options are loaded */
     MissingRequired = 2
-}
-
-export interface IItemFormContext {
-    pageType: PageType;
-    /** specify web ID, in case of working on a different web */
-    webId?: string;
-    listId: string;
-    itemId?: number;
-    /** optional, additional items to update */
-    otherItems?: number[];
-    /** optional, content type ID for a new item */
-    contentTypeId?: string;
-    /** optional, root folder to save the new item in */
-    rootFolder?: string;
-    context: ISpfxBaseComponentContext;
-    /** optional, if a custom action was clicked */
-    isInfoPane?: boolean;
-    /** optional, form is open in side panel */
-    isSidePanel?: boolean;
-    actionId?: string;
 }
 
 /** Calculated - a calculated column created by the user. Computed - a system column, such as content type, edit menu, select column */
