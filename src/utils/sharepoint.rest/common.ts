@@ -7,7 +7,7 @@ import { FieldTypeAsString, IFieldInfoEX, IFieldTaxonomyInfo } from "../../types
 import { ISPRestError } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
-import { GetJsonSync, longLocalCache, mediumLocalCache } from "../rest";
+import { mediumLocalCache } from "../rest";
 import { GetWebIdSync, GetWebInfoSync } from "./web";
 
 const logger = ConsoleLogger.get("sharepoint.rest/common");
@@ -26,18 +26,15 @@ export function hasGlobalContext() {
 export function GetFileSiteUrl(fileUrl: string): string {
     let siteUrl: string;
     let urlParts = fileUrl.split('/');
+    if (urlParts[urlParts.length - 1].indexOf('.') > 0)//file name
+        urlParts.pop();//file name
 
-    let key = "GetSiteUrl|" + fileUrl.toLowerCase();
+    let key = "GetSiteUrl|" + urlParts.join("/").toLowerCase();
     siteUrl = getCacheItem<string>(key);
     if (isNullOrUndefined(siteUrl)) {
-        while (urlParts.length > 0) {
-            const candidateUrl = makeServerRelativeUrl(normalizeUrl(urlParts.join("/"), true))
-            const syncResult = GetJsonSync<{ d: { Id: string; }; }>(`${candidateUrl}_api/web/Id`, null, { ...longLocalCache });
-            if (syncResult.success && isValidGuid(syncResult.result.d.Id)) {
-                break
-            }
+        while (!isValidGuid(GetWebIdSync(urlParts.join('/'))))
             urlParts.pop();
-        }
+
         siteUrl = normalizeUrl(urlParts.join('/'));
         setCacheItem(key, siteUrl, mediumLocalCache.localStorageExpiration);//keep for 15 minutes
     }
