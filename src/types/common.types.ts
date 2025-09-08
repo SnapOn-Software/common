@@ -14,3 +14,8 @@ export interface ITypesDisplayInfo<ValueType> {
 }
 
 export type DateOrNull = Date | null;
+
+export interface iFileData {
+    filename: string;
+    base64: string;
+}
