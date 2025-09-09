@@ -830,7 +830,7 @@ export function isSPPageContextInfoReadySync() {
     if (contextReady !== true) {
         let pageAsJson = GetPageAsJsonSync();
         if (!isNullOrUndefined(pageAsJson) && !isNullOrUndefined(pageAsJson.spPageContextInfo)) {
-            window["_spPageContextInfo"] = pageAsJson.spPageContextInfo;
+            globalThis["_spPageContextInfo"] = pageAsJson.spPageContextInfo;
         }
     }
 

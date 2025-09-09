@@ -89,7 +89,7 @@ export function saveFile(fileName: string, fileData: string, type: "application/
             document.body.appendChild(link); // Required for FF
             link.href = url;
         }
-        window.setTimeout(() => {
+        globalThis.setTimeout(() => {
             link.click();
         }, 200);
     }
@@ -114,7 +114,7 @@ export function saveZipFile(fileName: string, fileDataBase64: string) {
         document.body.appendChild(link);
         link.href = url;
     }
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
         link.click();
     }, 200);
 }
@@ -834,7 +834,7 @@ export function waitForWindowObject(typeFullName: string, windowOrParent?: Windo
 /** timeouts after 10 seconds by default */
 export function waitFor(checker: () => boolean, timeout = 10000, intervalLength = 50): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        var timeoutId: number = null;
+        var timeoutId: NodeJS.Timeout = null;
 
         var max = Math.round(timeout / intervalLength);
         var count = 0;
@@ -842,7 +842,7 @@ export function waitFor(checker: () => boolean, timeout = 10000, intervalLength 
 
         var _retry = () => {
             if (timeoutId) {
-                window.clearTimeout(timeoutId);
+                globalThis.clearTimeout(timeoutId);
             }
 
             try {
@@ -855,7 +855,7 @@ export function waitFor(checker: () => boolean, timeout = 10000, intervalLength 
             if (exists || count > max) {
                 resolve(exists);
             } else {
-                timeoutId = window.setTimeout(_retry, intervalLength);
+                timeoutId = globalThis.setTimeout(_retry, intervalLength);
             }
 
             count++;
@@ -893,7 +893,7 @@ export async function waitForAsync(checker: () => Promise<boolean>, timeout = 10
  */
 export function delayAsync(delay = 500) {
     return new Promise((resolve) => {
-        window.setTimeout(() => {
+        globalThis.setTimeout(() => {
             resolve(null);
         }, delay);
     });
@@ -1132,8 +1132,8 @@ export function addEventListeners(eles: ElementOrElemenctList, events: string | 
 export function debounce<T extends (...args) => void>(callback: T, ms: number, thisArg: any = null): T {
     let timeoutId = null;
     let func = (...args) => {
-        window.clearTimeout(timeoutId);
-        timeoutId = window.setTimeout(() => {
+        globalThis.clearTimeout(timeoutId);
+        timeoutId = globalThis.setTimeout(() => {
             callback.apply(thisArg, args);
         }, ms);
     };
@@ -1143,7 +1143,7 @@ export function debounce<T extends (...args) => void>(callback: T, ms: number, t
 /** call a funciton X number of times, on a specific interval. */
 export function interval<T extends () => void>(callback: T, msBetweenCalls: number, numberOfTimesToCall: number, thisArg: any = null) {
     for (let index = 1; index <= numberOfTimesToCall; index++)
-        window.setTimeout(() => { callback.apply(thisArg); }, msBetweenCalls * index);
+        globalThis.setTimeout(() => { callback.apply(thisArg); }, msBetweenCalls * index);
 }
 
 /** throttle repeated calls to callback, makes sure it is only called once per *wait* at most, but won't defer it for longer than that.
@@ -1151,7 +1151,7 @@ export function interval<T extends () => void>(callback: T, msBetweenCalls: numb
  */
 export function throttle<T extends (...args) => any>(callback: T, wait = 250, thisArg: any = null): T {
     let previous = 0;
-    let timeout: number | null = null;
+    let timeout: NodeJS.Timeout | null = null;
     let result: any;
     let storedContext = thisArg;
     let storedArgs: any[];
@@ -1185,7 +1185,7 @@ export function throttle<T extends (...args) => any>(callback: T, wait = 250, th
                 storedArgs = [];
             }
         } else if (!timeout) {
-            timeout = window.setTimeout(later, remaining);
+            timeout = globalThis.setTimeout(later, remaining);
         }
 
         return result;
@@ -1282,7 +1282,7 @@ export function registerUrlChanged(callback: () => void) {
         } else {
             let url = window.location.href;
 
-            window.setInterval(() => {
+            globalThis.setInterval(() => {
                 if (url !== window.location.href) {
                     url = window.location.href;
                     executeCallbacks();
