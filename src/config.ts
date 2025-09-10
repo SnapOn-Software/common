@@ -21,3 +21,5 @@ export function config(params: iConfigParams & {
         logger: GetLogger
     }
 }
+
+export { BuildNumber, IsFastRing, IsLocalDev, IsProduction, ReleaseStatus } from "./_dependencies";
