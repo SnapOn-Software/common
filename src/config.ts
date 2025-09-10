@@ -1,11 +1,15 @@
 import { SetDependencies } from './_dependencies';
+import { releasetypes } from './exports-index';
 import { ConsoleLogger } from './utils/consolelogger';
 
-export function config(params: {
+export interface iConfigParams {
     BuildNumber?: string;
-    IsLocalDev?: boolean;
-    ReleaseStatus?: string;
+    ReleaseStatus?: releasetypes;
+};
+export function config(params: iConfigParams & {
     ProjectName?: string;
+    /** @deprecated use ReleaseStatus="dev" */
+    IsLocalDev?: boolean;
 }) {
     SetDependencies(params);
     function GetLogger(name: string) {

@@ -1,5 +1,7 @@
 //Drop common, non product specific, types
 
+export type releasetypes = "dev" | "fastring" | "production" | "npm";
+
 export interface IDictionary<valueType> { [key: string]: valueType; }
 
 export type IdTextPair = { id: string; text: string; };
