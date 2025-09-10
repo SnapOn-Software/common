@@ -1,6 +1,6 @@
 {
     "name": "@kwiz/common",
-    "version": "1.0.155",
+    "version": "1.0.156",
     "description": "KWIZ common utilities and helpers for M365 platform",
     "main": "lib/cjs/index.js",
     "module": "lib/esm/index.js",
