@@ -78,27 +78,27 @@ export class ConsoleLogger {
         return ConsoleLogger._getDefaultLogger().getLevel();
     }
 
-    public static debug(message: string) {
+    public static debug(message: any) {
         ConsoleLogger._getDefaultLogger().debug(message);
     }
 
-    public static info(message: string) {
+    public static info(message: any) {
         ConsoleLogger._getDefaultLogger().info(message);
     }
 
-    public static log(message: string) {
+    public static log(message: any) {
         ConsoleLogger._getDefaultLogger().log(message);
     }
 
-    public static warn(message: string) {
+    public static warn(message: any) {
         ConsoleLogger._getDefaultLogger().warn(message);
     }
 
-    public static error(message: string) {
+    public static error(message: any) {
         ConsoleLogger._getDefaultLogger().error(message);
     }
 
-    public static trace(message: string) {
+    public static trace(message: any) {
         ConsoleLogger._getDefaultLogger().trace(message);
     }
 
@@ -140,24 +140,24 @@ export class ConsoleLogger {
         this.logWithLevel(LoggerLevel.DEBUG, message);
     }
 
-    public info(message: string) {
+    public info(message: any) {
         this.logWithLevel(LoggerLevel.INFO, message);
     }
 
-    public log(message: string) {
+    public log(message: any) {
         this.logWithLevel(LoggerLevel.LOG, message);
     }
 
     /** output a message when debug is off */
-    public warn(message: string) {
+    public warn(message: any) {
         this.logWithLevel(LoggerLevel.WARN, message);
     }
     /** output a message when debug is off */
-    public error(message: string) {
+    public error(message: any) {
         this.logWithLevel(LoggerLevel.ERROR, message);
     }
     /** output a message when debug is off */
-    public trace(message: string) {
+    public trace(message: any) {
         this.logWithLevel(LoggerLevel.TRACE, message);
     }
 
@@ -302,7 +302,7 @@ export class ConsoleLogger {
         return result;
     }
 
-    private logWithLevel(level, message) {
+    private logWithLevel(level: LoggerLevel, message: any) {
         try {
             if (this.enabledFor(level)) {
                 var isSimpleObject = isString(message) || isNumber(message);
