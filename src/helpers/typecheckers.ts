@@ -130,7 +130,7 @@ export function isNullOrNaN(o: any): boolean {
     return isNullOrEmptyString(o) || isNaN(o);
 }
 
-/** return true if o is undefined, null or empty string */
+/** return true if o is undefined, null or empty string - false for any other types or non empty strings */
 export function isNullOrEmptyString(o: any): o is null | undefined | "" {
     return isNullOrUndefined(o) || o === '';
 }
