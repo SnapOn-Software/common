@@ -1,20 +1,27 @@
-import { releasetypes } from "./exports-index";
+import { iConfigInfo, iConfigParams } from "./exports-index";
 
-export var BuildNumber = "unset";
-/** release status = dev */
-export var IsLocalDev = false;
-/** release status = fastring */
-export var IsFastRing = false;
-/** release status is something else */
-export var IsProduction = true;
-export var ReleaseStatus: releasetypes = "npm";
-export function SetDependencies(params: {
-    BuildNumber?: string;
-    ReleaseStatus?: releasetypes;
-}) {
-    if (typeof params.BuildNumber === "string") BuildNumber = params.BuildNumber;
-    if (typeof params.ReleaseStatus === "string") ReleaseStatus = params.ReleaseStatus;
-    IsLocalDev = ReleaseStatus === "dev";
-    IsFastRing = ReleaseStatus === "fastring";
-    IsProduction = ReleaseStatus !== "dev" && ReleaseStatus !== "fastring";
+
+export const configInfo: iConfigInfo = {
+    BuildNumber: "unset",
+    ReleaseStatus: "npm",
+    IsLocalDev: false,
+    IsFastRing: false,
+    IsProduction: true,
+    ProjectName: "[kw]"
+}
+
+export function SetDependencies(params: iConfigParams) {
+    const BuildNumber = (typeof params.BuildNumber === "string") ? params.BuildNumber : configInfo.BuildNumber;
+    const ReleaseStatus = (typeof params.ReleaseStatus === "string") ? params.ReleaseStatus : configInfo.ReleaseStatus;
+    const newValue: iConfigInfo = {
+        BuildNumber,
+        ReleaseStatus,
+        IsLocalDev: ReleaseStatus === "dev",
+        IsFastRing: ReleaseStatus === "fastring",
+        IsProduction: ReleaseStatus !== "dev" && ReleaseStatus !== "fastring",
+        ProjectName: params.ProjectName || configInfo.ProjectName
+    };
+
+    for (const key in newValue)//update configInfo
+        configInfo[key] = newValue[key];
 }

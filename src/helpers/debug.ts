@@ -1,4 +1,4 @@
-import { IsLocalDev } from "../_dependencies";
+import { configInfo } from "../_dependencies";
 import { deleteCookie, getCookie, setCookie } from "./cookies";
 import { $w, getKWizComGlobal } from "./objects";
 import { sleepAsync } from "./promises";
@@ -135,7 +135,7 @@ export function isDebug() {
     var kGlobal = GetGlobalDebug();
 
     if (isNullOrUndefined(kGlobal.Debug._debug)) {
-        kGlobal.Debug._debug = IsLocalDev ||
+        kGlobal.Debug._debug = configInfo.IsLocalDev ||
             $w.location.href.indexOf('kwdebug=true') > 0 ||
             $w.location.href.indexOf('/workbench.aspx') > 0 ||
             getCookie("KWizComDebug") === "true";

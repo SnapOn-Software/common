@@ -1,4 +1,4 @@
-import { BuildNumber, ReleaseStatus } from "../_dependencies";
+import { configInfo } from "../_dependencies";
 import { getSecondsElapsed } from "../helpers/date";
 import { consoleLoggerFilter, isDebug } from "../helpers/debug";
 import { getGlobal, jsonClone } from "../helpers/objects";
@@ -52,7 +52,7 @@ export class ConsoleLogger {
 
         if (!global.loggedBuild) {
             global.loggedBuild = true;
-            console.debug(`${ConsoleLogger.commonPrefix()} KWIZ build ${ReleaseStatus}.${BuildNumber}`);
+            console.debug(`${ConsoleLogger.commonPrefix()} KWIZ build ${configInfo.ReleaseStatus}.${configInfo.BuildNumber}`);
         }
 
         return loggers[name] || (loggers[name] = new ConsoleLogger({ name: name, prefix: prefix }));

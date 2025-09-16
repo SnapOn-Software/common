@@ -1,4 +1,4 @@
-import { IsLocalDev } from "../../../_dependencies";
+import { configInfo } from "../../../_dependencies";
 import { chunkArray, firstIndexOf, firstOrNull, makeUniqueArray, toHash } from "../../../helpers/collections.base";
 import { EnsureViewFields, GetOrderByFromCaml, RemoveOrderByFromCaml, getFieldOutputType } from "../../../helpers/sharepoint";
 import { isDate, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumeric } from "../../../helpers/typecheckers";
@@ -162,7 +162,7 @@ export async function GetListItemsByCaml(siteUrl: string, listIdOrTitle: string,
 
         if (postProcessOrderBy) {
             //re-apply sort
-            if (IsLocalDev) {
+            if (configInfo.IsLocalDev) {
                 logger.table(itemsResult.map(i => {
                     let row = {
                         Id: i.Id,
@@ -190,7 +190,7 @@ export async function GetListItemsByCaml(siteUrl: string, listIdOrTitle: string,
                 return 0;
             });
 
-            if (IsLocalDev) {
+            if (configInfo.IsLocalDev) {
                 logger.table(itemsResult.map(i => {
                     let row = {
                         Id: i.Id,
