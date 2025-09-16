@@ -25,6 +25,7 @@ export class GetLogger {
         return this.instance;
     };
 }
+
 var GetLoggerInternal = (name: string) => {
     console.warn('@kwiz/common not configured yet! Call config before this code runs.');
     return ConsoleLogger.get(name);
@@ -49,6 +50,12 @@ export function config(params: iConfigParams) {
         /** @deprecated call GetLogger instead  */
         logger: GetLogger,
         configInfo
+    }
+}
+
+export class CommonConfig {
+    public get i() {
+        return configInfo;
     }
 }
 
