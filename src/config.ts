@@ -10,6 +10,14 @@ export interface iConfigInfo {
     ProjectName: string;
 }
 
+export class CommonConfig {
+    private constructor() { }
+    public static get i() {
+        return configInfo;
+    }
+}
+
+var unconfigured = true;
 export class GetLogger {
     private name: string;
     public constructor(name: string) {
@@ -20,16 +28,14 @@ export class GetLogger {
     public get i(): ConsoleLogger {
         if (this.instance === null || this.projectNameUsed !== configInfo.ProjectName) {
             this.projectNameUsed = configInfo.ProjectName;
-            this.instance = GetLoggerInternal(this.name);
+            if (unconfigured) console.warn('@kwiz/common not configured yet! Call config before this code runs.');
+            this.instance = ConsoleLogger.get(this.name, configInfo.ProjectName);
         }
         return this.instance;
     };
 }
 
-var GetLoggerInternal = (name: string) => {
-    console.warn('@kwiz/common not configured yet! Call config before this code runs.');
-    return ConsoleLogger.get(name);
-};
+var unconfigured = true;
 
 export interface iConfigParams {
     BuildNumber: string;
@@ -39,8 +45,7 @@ export interface iConfigParams {
 
 export function config(params: iConfigParams) {
     SetDependencies(params);
-    //initialize it and remove the warning. prefix will automatically use configInfo.ProjectName
-    GetLoggerInternal = name => ConsoleLogger.get(name);
+    unconfigured = false;
     const GetLogger = (name: string) => {
         return ConsoleLogger.get(name, configInfo.ProjectName);
     };
@@ -50,13 +55,6 @@ export function config(params: iConfigParams) {
         /** @deprecated call GetLogger instead  */
         logger: GetLogger,
         configInfo
-    }
-}
-
-export class CommonConfig {
-    private constructor() { }
-    public static get i() {
-        return configInfo;
     }
 }
 
