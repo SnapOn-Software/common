@@ -23,11 +23,11 @@ export class GetLogger {
     public constructor(name: string) {
         this.name = name;
     }
-    private projectNameUsed: string = null;
     private instance: ConsoleLogger = null;
     public get i(): ConsoleLogger {
-        if (this.instance === null || this.projectNameUsed !== configInfo.ProjectName) {
-            this.projectNameUsed = configInfo.ProjectName;
+        console.log(configInfo);
+        console.log(CommonConfig.i);
+        if (this.instance === null || this.instance.context.prefix !== configInfo.ProjectName) {
             if (unconfigured) console.warn('@kwiz/common not configured yet! Call config before this code runs.');
             this.instance = ConsoleLogger.get(this.name, configInfo.ProjectName);
         }
