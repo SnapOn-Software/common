@@ -54,8 +54,8 @@ export class ConsoleLogger {
             global.loggedBuild = true;
             console.debug(`${ConsoleLogger.commonPrefix()} KWIZ build ${configInfo.ReleaseStatus}.${configInfo.BuildNumber}`);
         }
-
-        return loggers[name] || (loggers[name] = new ConsoleLogger({ name: name, prefix: prefix }));
+        const key = `${name}|${prefix}`;
+        return loggers[key] || (loggers[key] = new ConsoleLogger({ name: name, prefix: prefix }));
     }
 
     private static _getGlobal() {

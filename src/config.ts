@@ -25,8 +25,6 @@ export class GetLogger {
     }
     private instance: ConsoleLogger = null;
     public get i(): ConsoleLogger {
-        console.log(configInfo);
-        console.log(CommonConfig.i);
         if (this.instance === null || this.instance.context.prefix !== configInfo.ProjectName) {
             if (unconfigured) console.warn('@kwiz/common not configured yet! Call config before this code runs.');
             this.instance = ConsoleLogger.get(this.name, configInfo.ProjectName);
