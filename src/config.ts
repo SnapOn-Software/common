@@ -54,7 +54,8 @@ export function config(params: iConfigParams) {
 }
 
 export class CommonConfig {
-    public get i() {
+    private constructor() { }
+    public static get i() {
         return configInfo;
     }
 }
