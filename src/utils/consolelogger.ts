@@ -37,7 +37,7 @@ export type LoggerContext = {
     prefix?: string;
 };
 
-type logMessageValue = string | { label: string, value: Object };
+export type logMessageValue = string | { label: string, value: Object };
 type logMessage = { seconds: number, message: logMessageValue };
 export class ConsoleLogger {
     public context: LoggerContext;
