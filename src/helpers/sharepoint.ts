@@ -807,7 +807,7 @@ export function isAppWebSync() {
 }
 
 export async function isSPPageContextInfoReady() {
-    const contextReady = await waitForWindowObject("_spPageContextInfo", null, 333);
+    const contextReady = await waitForWindowObject("_spPageContextInfo", null, 100);
 
     if (contextReady !== true) {
         let pageAsJson = await GetPageAsJson();
@@ -824,7 +824,7 @@ export async function isSPPageContextInfoReady() {
     return false;
 }
 
-export function isSPPageContextInfoReadySync() {    
+export function isSPPageContextInfoReadySync() {
     const contextReady = !isTypeofFullNameNullOrUndefined("_spPageContextInfo");
 
     if (contextReady !== true) {
@@ -848,11 +848,11 @@ export function isExternalUser(loginName: string) {
 }
 
 function expandPageContext() {
+    if (!isTypeofFullNameNullOrUndefined("_spPageContextInfo")
+        && (_spPageContextInfo as any)["_hasExpandPageContext"] === true) {
+        return;
+    }
     logger.groupSync("expandPageContext", log => {
-        if((_spPageContextInfo as any)["_hasExpandPageContext"] === true){
-            return;
-        }
-
         const ctx = _spPageContextInfo;
         (ctx as any)["_hasExpandPageContext"] = true;
 
@@ -876,7 +876,7 @@ function expandPageContext() {
             log("ctx.listId");
             ctx.listId = ctx.pageListId;
         }
-        
+
         if (isNotEmptyString(ctx.listId)) {
             //has list
             if (isNullOrEmptyString(ctx.listUrl)) {
