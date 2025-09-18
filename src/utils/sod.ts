@@ -157,8 +157,8 @@ export default class Sod {
     public static ensureScriptNoPromise(scriptUrl: string, global: ksGlobal, callbacks?: iSodCallbacks, sodName?: string, sync = false) {
         if (!isNullOrEmptyString(global) && typeofFullName(Sod.getGlobal(global)) !== "undefined") {
             //this global object already exists, no need to reload this script.
-            if (isFunction(callbacks?.success)) {
-                callbacks?.success();
+            if (isFunction(callbacks && callbacks.success)) {
+                callbacks.success();
             }
         }
         else {
@@ -188,11 +188,11 @@ export default class Sod {
     public static async ensureScript(scriptUrl: string, global: ksGlobal, callbacks?: iSodCallbacks, sodName?: string, sync = false): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             let resolveCallback = () => {
-                callbacks?.success();
+                callbacks && callbacks.success();
                 resolve();
             };
             let rejectCallback = () => {
-                callbacks?.error();
+                callbacks && callbacks.error();
                 reject();
             };
             Sod.ensureScriptNoPromise(scriptUrl, global, { success: resolveCallback, error: rejectCallback }, sodName, sync);
