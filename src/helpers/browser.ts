@@ -1,5 +1,6 @@
 import { IDictionary } from "../types/common.types";
 import { firstIndexOf } from "./collections.base";
+import { kwiz_cdn_root } from "./constants";
 import { LOGO_ANIM } from "./images";
 import { getGlobal } from "./objects";
 import { getUniqueId } from "./random";
@@ -1346,7 +1347,7 @@ export function loadModernFormsCSS() {
         styleElm = document.createElement("link");
         styleElm.id = "kw_modernui_css";
         styleElm.rel = "stylesheet";
-        styleElm.href = "https://apps.kwizcom.com/products/modern/css/app.min.css";
+        styleElm.href = `${kwiz_cdn_root}/products/modern/css/app.min.css`;
         document.head.appendChild(styleElm);
     }
 }

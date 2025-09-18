@@ -1,7 +1,9 @@
 import { sortArray } from "./collections.base";
+import { kwiz_cdn_hostname_production } from "./constants";
 import { isNullOrEmptyString } from "./typecheckers";
 
-export const stockUrl = "https://apps.kwizcom.com/products/apsig/images/diagrams";
+//don't use kwiz_cdn_root since this might be saved in settings
+export const stockUrl = `https://${kwiz_cdn_hostname_production}/products/apsig/images/diagrams`;
 type DiagramInfo = {
     name: string;
     folderPrefix: string;

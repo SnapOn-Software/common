@@ -1,4 +1,5 @@
 import { configInfo } from "../_dependencies";
+import { kwiz_cdn_hostname_fastring, kwiz_cdn_hostname_localdev, kwiz_cdn_hostname_production } from "./constants";
 import { deleteCookie, getCookie, setCookie } from "./cookies";
 import { $w, getKWizComGlobal } from "./objects";
 import { sleepAsync } from "./promises";
@@ -88,7 +89,10 @@ function SetGlobalDebugFunction() {
                             if (cache) {
                                 let subKeys = await cache.keys();
                                 if (subKeys && subKeys.length) {
-                                    let keysToRemove = options.onlyKWizComCaches !== true ? subKeys : subKeys.filter(k => k.url.toLowerCase().indexOf('apps.kwizcom.com/') >= 0);
+                                    let keysToRemove = options.onlyKWizComCaches !== true ? subKeys : subKeys
+                                        .filter(k => k.url.toLowerCase().includes(`${kwiz_cdn_hostname_production}/`) ||
+                                            k.url.toLowerCase().includes(`${kwiz_cdn_hostname_fastring}/`) ||
+                                            k.url.toLowerCase().includes(`${kwiz_cdn_hostname_localdev}/`));
                                     for (let i2 = 0; i2 < keysToRemove.length; i2++) {
                                         let success = await cache.delete(keysToRemove[i2]);
                                         if (!success)//failed

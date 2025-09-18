@@ -1,3 +1,4 @@
+import { kwiz_cdn_root } from "../helpers/constants";
 import { isDebug } from "../helpers/debug";
 import { noop } from "../helpers/objects";
 import { isNotEmptyArray, isNullOrEmptyString, isNullOrUndefined } from "../helpers/typecheckers";
@@ -60,7 +61,7 @@ export default class script implements IScriptUtils {
 
     private ensureKnownScriptInternal(knownScript: IKnownScript, callback: () => void, sync = false) {
         let url = isDebug() && !knownScript.forceMin ? knownScript.url.replace('.min.js', '.js') : knownScript.url;
-        if (url[0] === '/') url = "https://apps.kwizcom.com" + url;
+        if (url[0] === '/') url = kwiz_cdn_root + url;
 
         if (sync === true)
             this.ensureScriptSync(url, knownScript.global, callback, knownScript.sodName);
@@ -72,7 +73,7 @@ export default class script implements IScriptUtils {
             cssFiles.forEach(css => {
                 if (!isNullOrEmptyString(css)) {
                     let cssurl = isDebug() && !knownScript.forceMin ? css.replace('.min.css', '.css') : css;
-                    if (cssurl[0] === '/') cssurl = "https://apps.kwizcom.com" + cssurl;
+                    if (cssurl[0] === '/') cssurl = kwiz_cdn_root + cssurl;
 
                     let knownStyles = document.getElementsByClassName("kwizcom_known_css");
                     let found = false;
