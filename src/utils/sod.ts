@@ -1,6 +1,9 @@
+import { GetLogger } from "../config";
 import { isDebug } from "../helpers/debug";
 import { getFromFullName, isFunction, isNullOrEmptyString, isNullOrUndefined, isString, isTypeofFullNameNullOrUndefined, typeofFullName } from "../helpers/typecheckers";
 import { ksGlobal } from "../types/knownscript.types";
+
+const logger = new GetLogger("sod");
 
 declare global {
     interface Window {
@@ -8,15 +11,19 @@ declare global {
     }
 }
 
-interface ISodCallback {
+export interface iSodCallbacks {
+    success: () => void;
+    error: () => void;
+}
+interface ISodCallback_internal extends iSodCallbacks {
     called: boolean;
-    callback: () => void;
 }
 
 // eslint-disable-next-line no-shadow
 enum SodState {
     pending = "pending",
-    done = "done"
+    done = "done",
+    error = "error"
 }
 
 export default class Sod {
@@ -25,7 +32,7 @@ export default class Sod {
     private script: HTMLScriptElement;
     private state: string;
     private notified: boolean;
-    private callbacks: ISodCallback[];
+    private callbacks: ISodCallback_internal[];
 
     public constructor(url: string, sodName: string) {
         this.url = url;
@@ -34,10 +41,6 @@ export default class Sod {
         this.notified = false;
         this.callbacks = [];
         this.script = null;
-    }
-
-    private error() {
-        if (isDebug()) console.log('unhandled error in sod');
     }
 
     private loadScript(scriptUrl: string, sync = false) {
@@ -60,17 +63,30 @@ export default class Sod {
         }
     }
 
+    private error() {
+        let self = this;
+        if (isDebug()) logger.error('unhandled error in sod: 0x0000002');
+        //after error was logged - resolve all pending promises...
+        //otherwise callers promises will never stop awaiting
+        self.state = SodState.error;
+        if (!self.notified) {
+            self.notify();
+        }
+    }
+
     private notify() {
         let self = this;
         var callbackLength = self.callbacks.length;
         for (var i = 0; i < callbackLength; i++) {
             var sodCallback = self.callbacks[i];
-            if (!sodCallback.called && typeof (sodCallback.callback) === "function") {
+            if (!sodCallback.called && typeof (sodCallback.success) === "function") {
                 try {
-                    sodCallback.callback();
+                    self.state === SodState.error
+                        ? sodCallback.error()
+                        : sodCallback.success();
                     sodCallback.called = true;
                 } catch (ex) {
-                    if (isDebug()) console.log('unhandled error in sod');
+                    if (isDebug()) logger.error('unhandled error in sod: 0x0000001');
                 }
             }
         }
@@ -138,11 +154,11 @@ export default class Sod {
             return global.getter();
     }
 
-    public static ensureScriptNoPromise(scriptUrl: string, global: ksGlobal, callback?: () => void, sodName?: string, sync = false) {
+    public static ensureScriptNoPromise(scriptUrl: string, global: ksGlobal, callbacks?: iSodCallbacks, sodName?: string, sync = false) {
         if (!isNullOrEmptyString(global) && typeofFullName(Sod.getGlobal(global)) !== "undefined") {
             //this global object already exists, no need to reload this script.
-            if (isFunction(callback)) {
-                callback();
+            if (isFunction(callbacks?.success)) {
+                callbacks?.success();
             }
         }
         else {
@@ -153,25 +169,33 @@ export default class Sod {
                 sod = Sod._addGlobalSod(sodName, scriptUrl);
             }
 
-            if (!isNullOrUndefined(callback)) {
-                sod.callbacks.push({ "called": false, "callback": callback });
+            if (!isNullOrUndefined(callbacks)) {
+                sod.callbacks.push({
+                    called: false,
+                    success: callbacks.success,
+                    error: callbacks.error
+                });
             }
 
             if (!sod.script) {
                 sod.loadScript(scriptUrl, sync);
-            } else if (sod.state === SodState.done || sod.notified) {
+            } else if (sod.state === SodState.done || sod.state === SodState.error || sod.notified) {
                 sod.notify();
             }
         }
     }
 
-    public static async ensureScript(scriptUrl: string, global: ksGlobal, callback?: () => void, sodName?: string, sync = false): Promise<void> {
+    public static async ensureScript(scriptUrl: string, global: ksGlobal, callbacks?: iSodCallbacks, sodName?: string, sync = false): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             let resolveCallback = () => {
-                if (!isNullOrUndefined(callback)) callback();
+                callbacks?.success();
                 resolve();
             };
-            Sod.ensureScriptNoPromise(scriptUrl, global, resolveCallback, sodName, sync);
+            let rejectCallback = () => {
+                callbacks?.error();
+                reject();
+            };
+            Sod.ensureScriptNoPromise(scriptUrl, global, { success: resolveCallback, error: rejectCallback }, sodName, sync);
         });
     }
 

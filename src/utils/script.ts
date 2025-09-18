@@ -1,17 +1,16 @@
 import { kwiz_cdn_root } from "../helpers/constants";
 import { isDebug } from "../helpers/debug";
-import { noop } from "../helpers/objects";
-import { isNotEmptyArray, isNullOrEmptyString, isNullOrUndefined } from "../helpers/typecheckers";
+import { isFunction, isNotEmptyArray, isNullOrEmptyString, isNullOrUndefined } from "../helpers/typecheckers";
 import { IKnownScript, ksGlobal } from "../types/knownscript.types";
-import Sod from "./sod";
+import Sod, { iSodCallbacks } from "./sod";
 
 export interface IScriptUtils {
     /** @deprecated - use wrapFunction instead from helpers/functions */
     wrapFunction3?: (originalFunction: () => void, instance: any, doBefore: () => void, doAfter: () => void) => void;
     loadKnownScript: (script: IKnownScript) => void;
     loadKnownScript_Sync: (script: IKnownScript) => void;
-    ensureScript: (scriptUrl: string, global: ksGlobal, callback: () => void, sodName: string) => void;
-    ensureScripts: (scripts: { scriptUrl: string; global: ksGlobal; sodName: string; }[], callback: () => void) => void;
+    ensureScript: (scriptUrl: string, global: ksGlobal, callback: (() => void) | iSodCallbacks, sodName: string) => void;
+    ensureScripts: (scripts: { scriptUrl: string; global: ksGlobal; sodName: string; }[], callback: (() => void) | iSodCallbacks) => void;
 }
 
 export default class script implements IScriptUtils {
@@ -40,8 +39,11 @@ export default class script implements IScriptUtils {
             await Promise.all(promisesDependencies);
 
         return new Promise((resolve, reject) => {
-            this.ensureKnownScriptInternal(knownScript, () => {
-                resolve(Sod.getGlobal(knownScript.global));
+            this.ensureKnownScriptInternal(knownScript, {
+                success: () => {
+                    resolve(Sod.getGlobal(knownScript.global));
+                },
+                error: reject
             });
         });
     }
@@ -55,25 +57,25 @@ export default class script implements IScriptUtils {
         } catch {
         }
 
-        this.ensureKnownScriptInternal(knownScript, noop, true);
+        this.ensureKnownScriptInternal(knownScript, undefined, true);
         return Sod.getGlobal(knownScript.global);
     }
 
-    private ensureKnownScriptInternal(knownScript: IKnownScript, callback: () => void, sync = false) {
+    private ensureKnownScriptInternal(knownScript: IKnownScript, callbacks?: iSodCallbacks, sync = false) {
         let url = isDebug() && !knownScript.forceMin ? knownScript.url.replace('.min.js', '.js') : knownScript.url;
-        if (url[0] === '/') url = kwiz_cdn_root + url;
+        if (url[0] === '/') url = kwiz_cdn_root() + url;
 
         if (sync === true)
-            this.ensureScriptSync(url, knownScript.global, callback, knownScript.sodName);
+            this.ensureScriptSync(url, knownScript.global, callbacks, knownScript.sodName);
         else
-            this.ensureScript(url, knownScript.global, callback, knownScript.sodName);
+            this.ensureScript(url, knownScript.global, callbacks, knownScript.sodName);
 
         let cssFiles = this.isRtl === true && !isNullOrUndefined(knownScript.rtlCss) ? knownScript.rtlCss : knownScript.css;
         if (!isNullOrUndefined(cssFiles))
             cssFiles.forEach(css => {
                 if (!isNullOrEmptyString(css)) {
                     let cssurl = isDebug() && !knownScript.forceMin ? css.replace('.min.css', '.css') : css;
-                    if (cssurl[0] === '/') cssurl = kwiz_cdn_root + cssurl;
+                    if (cssurl[0] === '/') cssurl = kwiz_cdn_root() + cssurl;
 
                     let knownStyles = document.getElementsByClassName("kwizcom_known_css");
                     let found = false;
@@ -116,25 +118,44 @@ export default class script implements IScriptUtils {
         }
     }
 
-    public ensureScriptSync(scriptUrl: string, global: ksGlobal, callback?: () => void, sodName?: string) {
+    public ensureScriptSync(scriptUrl: string, global: ksGlobal, callbacks?: iSodCallbacks, sodName?: string) {
         //in IE there is no promise, we cannot use any async functions
-        return Sod.ensureScriptNoPromise(scriptUrl, global, callback, sodName, true);
+        return Sod.ensureScriptNoPromise(scriptUrl, global, callbacks, sodName, true);
     }
-    public async ensureScript(scriptUrl: string, global: ksGlobal, callback?: () => void, sodName?: string) {
-        return Sod.ensureScript(scriptUrl, global, callback, sodName, false);
+    public async ensureScript(scriptUrl: string, global: ksGlobal, callbacks?: (() => void) | iSodCallbacks, sodName?: string) {
+        if (isFunction(callbacks))
+            callbacks = { success: callbacks, error: callbacks };
+        return Sod.ensureScript(scriptUrl, global, callbacks, sodName, false);
     }
     /** ensure a collection of scripts and call the callback when they are all done */
-    public async ensureScripts(scripts: { scriptUrl: string; global: ksGlobal; sodName: string; }[], callback: () => void) {
+    public async ensureScripts(scripts: { scriptUrl: string; global: ksGlobal; sodName: string; }[], callbacks?: (() => void) | iSodCallbacks) {
+        if (isFunction(callbacks))
+            callbacks = { success: callbacks, error: callbacks };
+
         let promises: Promise<void>[] = [];
         let length = scripts.length;
         let finished = 0;
-        let onFinished = typeof (callback) !== "function" ? null : () => {
-            finished++;
-            if (finished === length)//all finished
-                callback();
-        };
+        let hadError = false;
+        const cbs: iSodCallbacks = callbacks ? {
+            success: () => {
+                finished++;
+                if (finished === length)//all finished
+                {
+                    hadError
+                        ? callbacks.error()
+                        : callbacks.success();
+                }
+            },
+            error: () => {
+                hadError = true;
+                finished++;
+                if (finished === length)//all finished
+                    callbacks.error();
+            }
+        } : null;
+
         scripts.forEach(scr => {
-            promises.push(Sod.ensureScript(scr.scriptUrl, scr.global, onFinished, scr.sodName));
+            promises.push(Sod.ensureScript(scr.scriptUrl, scr.global, cbs, scr.sodName));
         });
 
         return Promise.all(promises);
