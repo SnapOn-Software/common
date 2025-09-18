@@ -122,12 +122,12 @@ export function config(params: iConfigParams) {
 }
 
 /** @deprecated use configInfo instead */
-export const BuildNumber = configInfo.BuildNumber;
+export var BuildNumber = configInfo.BuildNumber;
 /** @deprecated use configInfo instead */
-export const IsFastRing = configInfo.IsFastRing;
+export var IsFastRing = configInfo.IsFastRing;
 /** @deprecated use configInfo instead */
-export const IsLocalDev = configInfo.IsLocalDev;
+export var IsLocalDev = configInfo.IsLocalDev;
 /** @deprecated use configInfo instead */
-export const IsProduction = configInfo.IsProduction;
+export var IsProduction = configInfo.IsProduction;
 /** @deprecated use configInfo instead */
-export const ReleaseStatus = configInfo.ReleaseStatus;
+export var ReleaseStatus = configInfo.ReleaseStatus;

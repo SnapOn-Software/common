@@ -9,7 +9,7 @@ export const kwiz_cdn_hostname_localdev = "localhost:4433";
 
 
 /** https://apps.kwizcom.com (or local dev/fast-ring) - runtime use only, don't use in places where this might get saved in settings */
-export const kwiz_cdn_root = `https://${configInfo.IsLocalDev
+export var kwiz_cdn_root = `https://${configInfo.IsLocalDev
     ? kwiz_cdn_hostname_localdev
     : configInfo.IsFastRing
         ? kwiz_cdn_hostname_fastring
