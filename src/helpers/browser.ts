@@ -1347,7 +1347,7 @@ export function loadModernFormsCSS() {
         styleElm = document.createElement("link");
         styleElm.id = "kw_modernui_css";
         styleElm.rel = "stylesheet";
-        styleElm.href = `${kwiz_cdn_root}/products/modern/css/app.min.css`;
+        styleElm.href = `${kwiz_cdn_root()}/products/modern/css/app.min.css`;
         document.head.appendChild(styleElm);
     }
 }
