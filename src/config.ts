@@ -10,6 +10,7 @@ export interface iConfigInfo {
     ProjectName: string;
 }
 
+/** @deprecated should only be used for 3rd party packages. Main entry-point should always call config and use the return value from that to ensure it wasn't tree shaken */
 export class CommonConfig {
     private constructor() { }
     public static get i() {
@@ -18,7 +19,8 @@ export class CommonConfig {
 }
 
 var unconfigured = true;
-export class GetLogger {
+/** @deprecated should only be used for 3rd party packages. Main entry-point should always call config and use the return value from that to ensure it wasn't tree shaken */
+export class CommonLogger {
     private name: string;
     public constructor(name: string) {
         this.name = name;
