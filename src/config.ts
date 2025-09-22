@@ -122,14 +122,3 @@ export function config(params: iConfigParams) {
         configInfo
     }
 }
-
-/** @deprecated use configInfo instead */
-export var BuildNumber = configInfo.BuildNumber;
-/** @deprecated use configInfo instead */
-export var IsFastRing = configInfo.IsFastRing;
-/** @deprecated use configInfo instead */
-export var IsLocalDev = configInfo.IsLocalDev;
-/** @deprecated use configInfo instead */
-export var IsProduction = configInfo.IsProduction;
-/** @deprecated use configInfo instead */
-export var ReleaseStatus = configInfo.ReleaseStatus;
