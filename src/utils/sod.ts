@@ -1,9 +1,9 @@
-import { GetLogger } from "../config";
+import { CommonLogger } from "../config";
 import { isDebug } from "../helpers/debug";
 import { getFromFullName, isFunction, isNullOrEmptyString, isNullOrUndefined, isString, isTypeofFullNameNullOrUndefined, typeofFullName } from "../helpers/typecheckers";
 import { ksGlobal } from "../types/knownscript.types";
 
-const logger = new GetLogger("sod");
+const logger = new CommonLogger("sod");
 
 declare global {
     interface Window {
