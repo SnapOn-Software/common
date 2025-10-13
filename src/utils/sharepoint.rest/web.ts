@@ -905,20 +905,22 @@ export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Dat
         date = toIsoDateFormat(date);
     }
 
-    let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
-    if (!isNullOrEmptyString(supportedLocale)) {
-        try {
-            let regionalSettings = await GetServerTimeZone(siteUrl);
+    if (_canUseIntlDateTimeFormat(date)) {
+        let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
+        if (!isNullOrEmptyString(supportedLocale)) {
+            try {
+                let regionalSettings = await GetServerTimeZone(siteUrl);
 
-            let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
-            if (!isNullOrEmptyString(timeZone)) {
-                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
+                let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+                if (!isNullOrEmptyString(timeZone)) {
+                    let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
 
-                if (!isNullOrEmptyString(result)) {
-                    return result;
+                    if (!isNullOrEmptyString(result)) {
+                        return result;
+                    }
                 }
+            } catch {
             }
-        } catch {
         }
     }
 
@@ -938,25 +940,33 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
         date = toIsoDateFormat(date);
     }
 
-    let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
-    if (!isNullOrEmptyString(supportedLocale)) {
-        try {
-            let regionalSettings = GetServerTimeZoneSync(siteUrl);
+    if (_canUseIntlDateTimeFormat(date)) {
+        let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
+        if (!isNullOrEmptyString(supportedLocale)) {
+            try {
+                let regionalSettings = GetServerTimeZoneSync(siteUrl);
 
-            let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
-            if (!isNullOrEmptyString(timeZone)) {
-                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
-                if (!isNullOrEmptyString(result)) {
-                    return result;
+                let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+                if (!isNullOrEmptyString(timeZone)) {
+                    let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
+                    if (!isNullOrEmptyString(result)) {
+                        return result;
+                    }
                 }
+            } catch {
             }
-        } catch {
         }
     }
 
     let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/utcToLocalTime(@date)?@date='${encodeURIComponent(date)}'`;
     let result = GetJsonSync<{ value: string; }>(restUrl, null, { ...longLocalCache, jsonMetadata: jsonTypes.nometadata });
     return result.success && result.result.value || null;
+}
+
+function _canUseIntlDateTimeFormat(date: string) {
+    // Intl.DateTimeFormat has an issue with older dates
+    // https://stackoverflow.com/questions/43454520/timezone-issue-with-intl-datetimeformat-for-old-dates
+    return new Date(date).getFullYear() > 1975;
 }
 
 function _getSupportedLocaleForUTCToSPServerTime() {
