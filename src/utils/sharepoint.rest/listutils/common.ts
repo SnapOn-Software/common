@@ -8,7 +8,7 @@ import { ConsoleLogger } from "../../consolelogger";
 import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues } from "../common";
 import { GetItemsByIdSync } from "./GetListItemsById";
 
-const logger = ConsoleLogger.get("sharepoint.rest/list/common");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/listutils/common");
 
 export function __fixGetListItemsResults(siteUrl: string, listIdOrTitle: string, items: IRestItem[], foldersBehaviour?: GeListItemsFoldersBehaviour, expandedLookupFields?: IFieldInfoEX[]): IRestItem[] {
     let folders: { [folderPath: string]: IRestItem; } = {};

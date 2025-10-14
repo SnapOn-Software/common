@@ -4,7 +4,7 @@ import { ConsoleLogger } from "../consolelogger";
 import { GetJson } from "../rest";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 
-const logger = ConsoleLogger.get("SharePoint.Rest.Navigation-Links");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/navigation-links");
 
 /** 
  * Get all navigation links in the top and side navigation of a SharePoint site 

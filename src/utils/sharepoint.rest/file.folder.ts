@@ -11,7 +11,7 @@ import { GetJson, GetJsonSync, longLocalCache, mediumLocalCache, noLocalCache, s
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 import { GetListRestUrl } from "./list";
 
-const logger = ConsoleLogger.get("SharePoint.Rest.FileNFolder");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/file.folder");
 
 let existingFolders: string[] = [];
 

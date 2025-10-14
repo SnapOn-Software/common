@@ -7,7 +7,8 @@ import { ConsoleLogger } from "./consolelogger";
 import { getCacheItem, setCacheItem } from "./localstoragecache";
 import { getFormDigest } from "./sharepoint.rest/web";
 
-var logger = ConsoleLogger.get("kwizcom.rest.module");
+var logger = ConsoleLogger.get("utils/rest");
+
 const supressDebugMessages = true;
 
 /** cache for 1 day */

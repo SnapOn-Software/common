@@ -14,7 +14,7 @@ import { GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNa
 import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./list";
 import { GetUser, GetUserSync } from "./user";
 
-const logger = ConsoleLogger.get("SharePoint.Rest.Item");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/item");
 
 /** can only select FileSizeDisplay in REST api */
 export const FileSizeColumnInternalNames = ["FileSizeDisplay", "File_x0020_Size"];

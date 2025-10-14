@@ -15,7 +15,7 @@ import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, __getSPRestErrorD
 import { __fixGetListItemsResults } from "./listutils/common";
 import { GetContentTypes, GetContentTypesSync, GetListsSync, IGetContentTypesOptions } from "./web";
 
-const logger = ConsoleLogger.get("SharePoint.Rest.List");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/list");
 
 /** returns /_api/web/lists/getById() or /_api/web/lists/getByTitle() */
 export function GetListRestUrl(siteUrl: string, listIdOrTitle: string): string {

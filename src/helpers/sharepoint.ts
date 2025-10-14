@@ -23,7 +23,8 @@ const MODERN_EXPERIENCE_TEMP_COOKIE_NAME = `${MODERN_EXPERIENCE_COOKIE_NAME}_kwi
 const MOBILE_EXPERIENCE_COOKIE_NAME = "mobile";
 const MOBILE_EXPERIENCE_TEMP_COOKIE_NAME = `${MOBILE_EXPERIENCE_COOKIE_NAME}_kwizcom_original`;
 
-const logger = ConsoleLogger.get("_modules/helpers/sharepoint");
+const logger = ConsoleLogger.get("helpers/sharepoint");
+
 export function IsClassicPage() {
     if (!isTypeofFullNameUndefined("_spClientSideComponentIds")) {
         //only modern pages have the _spClientSideComponentIds object created on the page inline, not a in script that 
@@ -807,7 +808,7 @@ export function isAppWebSync() {
 }
 
 export async function isSPPageContextInfoReady() {
-    const contextReady = await waitForWindowObject("_spPageContextInfo", null, 100);
+    const contextReady = await waitForWindowObject("_spPageContextInfo", null, 1000);
 
     if (contextReady !== true) {
         let pageAsJson = await GetPageAsJson();
