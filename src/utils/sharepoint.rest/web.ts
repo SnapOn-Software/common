@@ -872,7 +872,9 @@ export async function SPServerLocalTimeToUTC(siteUrl: string, date: string | Dat
     let regionalSettings = await GetServerTimeZone(siteUrl);
     let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
-    if (!isNullOrEmptyString(timeZone)) {
+    // todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
+    // bundled package size
+    if (!isNullOrEmptyString(timeZone) && globalThis instanceof Window) {
         try {
             let momentTimezone = await MomentTimezoneJSKnownScript.load();
             let result = _momentLocalISOToUTC(date, timeZone, momentTimezone);
@@ -905,6 +907,8 @@ export function SPServerLocalTimeToUTCSync(siteUrl: string, date: string | Date)
     let regionalSettings = GetServerTimeZoneSync(siteUrl);
     let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
+    // todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
+    // bundled package size
     if (!isNullOrEmptyString(timeZone)) {
         try {
             let momentTimezone = MomentTimezoneJSKnownScript.loadSync();
@@ -984,7 +988,7 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
     let regionalSettings = GetServerTimeZoneSync(siteUrl);
     let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
-    if (!isNullOrEmptyString(timeZone)) {
+    if (!isNullOrEmptyString(timeZone) && typeof window !== "undefined") {
         try {
             let momentTimezone = MomentTimezoneJSKnownScript.loadSync();
             let result = _momentUTCToLocalISO(date, timeZone, momentTimezone);
@@ -1619,8 +1623,8 @@ export async function GetWebAssociatedGroups(siteUrl?: string) {
     return null;
 }
 
-// todo: Include the moment/moment-timezone library as a dependcy so it can be imported and chunked using webpack to reduce
+// todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
 // bundled package size
-window.setTimeout(() => {
+if (typeof window !== "undefined") {
     MomentTimezoneJSKnownScript.load();
-}, 33)
+}
