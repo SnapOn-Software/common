@@ -12,7 +12,7 @@ import { GetJson, GetJsonSync, longLocalCache, shortLocalCache } from "../rest";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 import { GetSiteId } from "./web";
 
-const logger = ConsoleLogger.get("utils/sharepoint/user");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/user");
 var __currentUserId: number = null;
 const groupSelect = "Id,Title,Description,CanCurrentUserViewMembership,OnlyAllowMembersViewMembership,IsHiddenInUI,OwnerTitle";
 const userSelect = "PrincipalType,Id,LoginName,UserPrincipalName,Title,IsSiteAdmin,Email";

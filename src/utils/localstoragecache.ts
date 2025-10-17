@@ -13,7 +13,7 @@ interface IExpirationsDictionary {
     build: string;
 }
 
-let logger = ConsoleLogger.get("localstoragecache");
+let logger = ConsoleLogger.get("utils/localstoragecache");
 
 export const keyPrefix = "kw$_";
 export const LOCAL_STORAGE_PREFIX = "kwizcom-localstorage-cache";

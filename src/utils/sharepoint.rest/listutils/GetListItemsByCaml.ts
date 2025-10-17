@@ -15,7 +15,7 @@ import { SPServerLocalTimeToUTCSync } from "../web";
 import { GetItemsById } from "./GetListItemsById";
 import { SkipFields, __fixGetListItemsResults } from "./common";
 
-const logger = ConsoleLogger.get("sharepoint.rest/list/GetListItemsByCaml");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/listutils/GetListItemsByCaml");
 
 interface ICamlOptions {
     /** Optional, default: 1000. 0: get all items. */

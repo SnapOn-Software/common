@@ -10,7 +10,7 @@ import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { mediumLocalCache } from "../rest";
 import { GetWebIdSync, GetWebInfoSync } from "./web";
 
-const logger = ConsoleLogger.get("sharepoint.rest/common");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/common");
 
 export const LIST_SELECT = `ListExperienceOptions,EffectiveBasePermissions,Description,Title,EnableAttachments,EnableModeration,BaseTemplate,BaseType,Id,Hidden,IsApplicationList,IsPrivate,IsCatalog,ImageUrl,ItemCount,ParentWebUrl,EntityTypeName,DefaultViewUrl,ParentWeb/Id,ParentWeb/Title`;
 export const LIST_EXPAND = `ParentWeb/Id,ParentWeb/Title`;

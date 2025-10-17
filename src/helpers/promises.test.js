@@ -17,7 +17,7 @@ test('promiseOnce', async t => {
     await t.test("Third call", t => assert.strictEqual(value === value3, true));
 });
 
-test('promisLock', async t => {
+test('promiseLock', async t => {
 
     let promiseLockTester = async() => {
         return new Date().getTime();

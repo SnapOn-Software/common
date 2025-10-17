@@ -1,5 +1,6 @@
+import { typeMonentJSTimeZone } from "../../exports-index";
 import { sortArray } from "../../helpers/collections.base";
-import { isISODate } from "../../helpers/date";
+import { isISODate, isISODateUTC } from "../../helpers/date";
 import { jsonStringify } from "../../helpers/json";
 import { getGlobal } from "../../helpers/objects";
 import { promiseLock } from "../../helpers/promises";
@@ -14,12 +15,13 @@ import { IAppTile, IGroupInfo, IRestRoleDefinition, IRootWebInfo, ISiteInfo, ITi
 import { AutoDiscoverTenantInfo } from "../auth/discovery";
 import { ConsoleLogger } from "../consolelogger";
 import { toIsoDateFormat } from "../date";
+import { MomentTimezoneJSKnownScript } from "../knownscript";
 import { GetJson, GetJsonSync, extraLongLocalCache, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest";
 import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl, GetSiteUrl, GetSiteUrlLocally, LIST_EXPAND, LIST_SELECT, WEB_SELECT, hasGlobalContext } from "./common";
 import { GetListFields, GetListFieldsSync, GetListRestUrl } from "./list";
 import { SPTimeZoneIdToIANATimeZoneName } from "./timzone-map";
 
-const logger = ConsoleLogger.get("SharePoint.Rest.Web");
+const logger = ConsoleLogger.get("utils/sharepoint.rest/web");
 
 export async function GetSiteInfo(siteUrl?: string): Promise<ISiteInfo> {
     siteUrl = GetSiteUrl(siteUrl);
@@ -826,7 +828,7 @@ function GetServerTimeOffsetSync(siteUrl: string, date: Date) {
     else return 0;
 }
 
-/** get date yyyy:MM:ddTHH:mm:ss NO ZED, or a date object created in the server local time, and return a date object of the corrected UTC time */
+/** get date yyyy-MM-ddTHH:mm:ss NO ZED, or a date object created in the server local time, and return a date object of the corrected UTC time */
 export async function SPServerLocalTimeToUTCDate(siteUrl: string, date: string | Date) {
     //used in 7700
     if (isNullOrEmptyString(date)) return null;
@@ -838,7 +840,7 @@ export async function SPServerLocalTimeToUTCDate(siteUrl: string, date: string |
     return _SPServerLocalTimeToUTCDate(date, serverTimeOffset);
 }
 
-/** get date yyyy:MM:ddTHH:mm:ss NO ZED, or a date object created in the server local time, and return a date object of the corrected UTC time */
+/** get date yyyy-MM-ddTHH:mm:ss NO ZED, or a date object created in the server local time, and return a date object of the corrected UTC time */
 export function SPServerLocalTimeToUTCDateSync(siteUrl: string, date: string | Date) {
     //used in 7700
     if (isNullOrEmptyString(date)) return null;
@@ -855,8 +857,8 @@ function _SPServerLocalTimeToUTCDate(date: Date, serverTimeOffset: number) {
     return new Date(serverTimeOffset - localTimeOffset + date.getTime());
 }
 
-/** get date yyyy:MM:ddTHH:mm:ss NO ZED
- * returns yyyy:MM:ddTHH:mm:ssZ
+/** get date yyyy-MM-ddTHH:mm:ss NO ZED
+ * returns yyyy-MM-ddTHH:mm:ssZ
  * expensive, but works. for faster bulk parsing use toIsoDateFormat(new Date(GetServerTimeOffset + date.getTime()))
  * or: SPServerLocalTimeToUTCDate
  */
@@ -867,14 +869,31 @@ export async function SPServerLocalTimeToUTC(siteUrl: string, date: string | Dat
         date = toIsoDateFormat(date, { omitZ: true });
     }
 
+    let regionalSettings = await GetServerTimeZone(siteUrl);
+    let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+
+    // todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
+    // bundled package size
+    if (!isNullOrEmptyString(timeZone) && globalThis instanceof Window) {
+        try {
+            let momentTimezone = await MomentTimezoneJSKnownScript.load();
+            let result = _momentLocalISOToUTC(date, timeZone, momentTimezone);
+            if (!isNullOrEmptyString(result)) {
+                logger.debug(`SPServerLocalTimeToUTC -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                return result;
+            }
+        } catch {
+        }
+    }
+
     let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/localTimeToUTC(@date)?@date='${encodeURIComponent(date)}'`;
 
     let result = await GetJson<{ value: string; }>(restUrl, null, { ...weeekLongLocalCache, jsonMetadata: jsonTypes.nometadata });
     return result && result.value || null;
 }
 /** 
- * convert date in ISO format (yyyy:MM:ddTHH:mm:ss) or SPServerLocalTime (5/27/2020 11:34, 5-27-2020 11:34)
- * returns date in ISO UTC (yyyy:MM:ddTHH:mm:ssZ)
+ * convert date in ISO format (yyyy-MM-ddTHH:mm:ss) or SPServerLocalTime (5/27/2020 11:34, 5-27-2020 11:34)
+ * returns date in ISO UTC (yyyy-MM-ddTHH:mm:ssZ)
  * expensive, but works. for faster bulk parsing use toIsoDateFormat(new Date(GetServerTimeOffset + date.getTime()))
  * or: SPServerLocalTimeToUTCDateSync
  */
@@ -883,6 +902,23 @@ export function SPServerLocalTimeToUTCSync(siteUrl: string, date: string | Date)
 
     if (isDate(date)) {
         date = toIsoDateFormat(date, { omitZ: true });
+    }
+
+    let regionalSettings = GetServerTimeZoneSync(siteUrl);
+    let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+
+    // todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
+    // bundled package size
+    if (!isNullOrEmptyString(timeZone)) {
+        try {
+            let momentTimezone = MomentTimezoneJSKnownScript.loadSync();
+            let result = _momentLocalISOToUTC(date, timeZone, momentTimezone);
+            if (!isNullOrEmptyString(result)) {
+                logger.debug(`SPServerLocalTimeToUTCSync -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                return result;
+            }
+        } catch {
+        }
     }
 
     let restUrl = `${GetRestBaseUrl(siteUrl)}/web/regionalSettings/timeZone/localTimeToUTC(@date)?@date='${encodeURIComponent(date)}'`;
@@ -894,8 +930,8 @@ export function SPServerLocalTimeToUTCSync(siteUrl: string, date: string | Date)
 //todo: move to types
 type IntlDateSupportedLocales = "en-CA" | "sv-SE";
 
-/** get utc date yyyy:MM:ddTHH:mm:ssZ
- * returns yyyy:MM:ddTHH:mm:ss NO ZED
+/** get utc date yyyy-MM-ddTHH:mm:ssZ
+ * returns yyyy-MM-ddTHH:mm:ss NO ZED
  * expensive, but works. for faster bulk parsing use toIsoDateFormat(new Date(date.getTime()-GetServerTimeOffset,{omitZ:true}))
  */
 export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Date) {
@@ -905,20 +941,31 @@ export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Dat
         date = toIsoDateFormat(date);
     }
 
-    let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
-    if (!isNullOrEmptyString(supportedLocale)) {
+    let regionalSettings = await GetServerTimeZone(siteUrl);
+    let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
+
+    if (!isNullOrEmptyString(timeZone)) {
         try {
-            let regionalSettings = await GetServerTimeZone(siteUrl);
-
-            let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
-            if (!isNullOrEmptyString(timeZone)) {
-                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
-
-                if (!isNullOrEmptyString(result)) {
-                    return result;
-                }
+            let momentTimezone = await MomentTimezoneJSKnownScript.load();
+            let result = _momentUTCToLocalISO(date, timeZone, momentTimezone);
+            if (!isNullOrEmptyString(result)) {
+                logger.debug(`UTCToSPServerLocalTime -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                return result;
             }
         } catch {
+        }
+
+        if (_canUseIntlDateTimeFormat(date)) {
+            let supportedFormattingLocale = _getSupportedFormattingLocaleForUTCToSPServerTime();
+            if (!isNullOrEmptyString(supportedFormattingLocale)) {
+                try {
+                    let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedFormattingLocale);
+                    if (!isNullOrEmptyString(result)) {
+                        return result;
+                    }
+                } catch {
+                }
+            }
         }
     }
 
@@ -927,8 +974,8 @@ export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Dat
     return result && result.value || null;
 }
 
-/** get utc date yyyy:MM:ddTHH:mm:ssZ
- * returns yyyy:MM:ddTHH:mm:ss NO ZED
+/** get utc date yyyy-MM-ddTHH:mm:ssZ
+ * returns yyyy-MM-ddTHH:mm:ss NO ZED
  * expensive, but works. for faster bulk parsing use toIsoDateFormat(new Date(date.getTime()-GetServerTimeOffset,{omitZ:true}))
  */
 export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date) {
@@ -938,19 +985,31 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
         date = toIsoDateFormat(date);
     }
 
-    let supportedLocale = _getSupportedLocaleForUTCToSPServerTime();
-    if (!isNullOrEmptyString(supportedLocale)) {
-        try {
-            let regionalSettings = GetServerTimeZoneSync(siteUrl);
+    let regionalSettings = GetServerTimeZoneSync(siteUrl);
+    let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
-            let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
-            if (!isNullOrEmptyString(timeZone)) {
-                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedLocale);
-                if (!isNullOrEmptyString(result)) {
-                    return result;
-                }
+    if (!isNullOrEmptyString(timeZone) && typeof window !== "undefined") {
+        try {
+            let momentTimezone = MomentTimezoneJSKnownScript.loadSync();
+            let result = _momentUTCToLocalISO(date, timeZone, momentTimezone);
+            if (!isNullOrEmptyString(result)) {
+                logger.debug(`UTCToSPServerLocalTimeSync -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                return result;
             }
         } catch {
+        }
+
+        if (_canUseIntlDateTimeFormat(date)) {
+            let supportedFormattingLocale = _getSupportedFormattingLocaleForUTCToSPServerTime();
+            if (!isNullOrEmptyString(supportedFormattingLocale)) {
+                try {
+                    let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedFormattingLocale);
+                    if (!isNullOrEmptyString(result)) {
+                        return result;
+                    }
+                } catch {
+                }
+            }
         }
     }
 
@@ -959,7 +1018,51 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
     return result.success && result.result.value || null;
 }
 
-function _getSupportedLocaleForUTCToSPServerTime() {
+function _momentUTCToLocalISO(date: string, timeZone: string, momentTimezone: typeMonentJSTimeZone) {
+    try {
+        if (momentTimezone.names().includes(timeZone) && isISODateUTC(date)) {
+            let specificTimeInTimezone = momentTimezone(
+                date,
+                timeZone
+            );
+
+            let result = specificTimeInTimezone.format('YYYY-MM-DDTHH:mm:ss');
+            if (!isNullOrEmptyString(result)) {
+                return result;
+            }
+        }
+    } catch {
+    }
+    return null;
+}
+
+function _momentLocalISOToUTC(date: string, timeZone: string, momentTimezone: typeMonentJSTimeZone) {
+    try {
+        if (momentTimezone.names().includes(timeZone) && isISODate(date)) {
+            let specificTimeInTimezone = momentTimezone(
+                date,
+                'YYYY-MM-DDThh:mm:ss',
+                timeZone
+            );
+
+            let utcTime = specificTimeInTimezone.utc();
+            let result = utcTime.format();
+            if (!isNullOrEmptyString(result)) {
+                return result;
+            }
+        }
+    } catch {
+    }
+    return null;
+}
+
+function _canUseIntlDateTimeFormat(ISOdate: string) {
+    // Intl.DateTimeFormat has an issue with older dates
+    // https://stackoverflow.com/questions/43454520/timezone-issue-with-intl-datetimeformat-for-old-dates
+    return new Date(ISOdate).getFullYear() > 1975;
+}
+
+function _getSupportedFormattingLocaleForUTCToSPServerTime() {
     try {
         let supportedLocales = Intl.DateTimeFormat.supportedLocalesOf(["en-CA", "sv-SE"]) as IntlDateSupportedLocales[];
         return supportedLocales[0] as IntlDateSupportedLocales;
@@ -1518,4 +1621,10 @@ export async function GetWebAssociatedGroups(siteUrl?: string) {
     } catch {
     }
     return null;
+}
+
+// todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
+// bundled package size
+if (typeof window !== "undefined") {
+    MomentTimezoneJSKnownScript.load();
 }
