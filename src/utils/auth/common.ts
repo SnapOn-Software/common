@@ -18,6 +18,18 @@ export function GetMSALSiteScope(hostName: string) {
     return `https://${hostName}`;
 }
 
+export function GetMSALAdminConsentUrl(params: {
+    clientId: string; redirectUri: string;
+    /** use common if not provided */
+    tenantId?: string;
+    state?: string;
+}) {
+    const stateParam = isNullOrEmptyString(params.state) ? '' : `&state=${encodeURIComponent(params.state)}`;
+    const url = `https://login.microsoftonline.com/${params.tenantId || "common"}/adminconsent?client_id=${encodeURIComponent(params.clientId)}&redirect_uri=${encodeURIComponent(params.redirectUri)}${stateParam}`;
+    return url;
+}
+
+
 function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     let acquireURL = `${GetRestBaseUrl(siteUrl)}/SP.OAuth.Token/Acquire`;
     //todo: add all the resource end points (ie. OneNote, Yammer, Stream)
