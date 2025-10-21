@@ -81,7 +81,10 @@ async function _getListItemRawFieldValues(siteUrl: string, listIdOrTitle: string
     var $expand = expandFields.length ? `$expand=${encodeURIComponent(expandFields.join(','))}` : "";
 
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})?${$select}&${$expand}`;
-    let result = await GetJson<{ d: { [field: string]: any; }; }>(url, null, { allowCache: options.refreshCache !== true });
+    let result = await GetJson<{ d: { [field: string]: any; }; }>(url, null, {
+        allowCache: options.refreshCache !== true,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
 
     var values = {};
 
@@ -103,7 +106,10 @@ export function GetListItemFieldDisplayValueSync(siteUrl: string, listIdOrTitle:
 }
 export function GetListItemFieldDisplayValuesSync(siteUrl: string, listIdOrTitle: string, itemId: number | string, fields: string[]): IDictionary<string> {
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/FieldValuesAsText?$select=${fields.join(',')}`;
-    let result = GetJsonSync<IDictionary<string>>(url, null, { allowCache: true, jsonMetadata: jsonTypes.nometadata });
+    let result = GetJsonSync<IDictionary<string>>(url, null, {
+        allowCache: true, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return result.success ? result.result : {};
 }
 
@@ -155,7 +161,8 @@ export async function GetListItemFieldValuesHistory(siteUrl: string, listIdOrTit
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/versions?${$select}`;
     let result = await GetJson<{ value: IRestItem[]; }>(url, null, {
         allowCache: options.refreshCache !== true,
-        jsonMetadata: jsonTypes.nometadata
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
 
     return result && result.value || [];
@@ -201,7 +208,10 @@ export async function GetListItemAttachments(siteUrl: string, listIdOrTitle: str
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/AttachmentFiles`;
 
     try {
-        let result = await GetJson<{ d: { results: IAttachmentInfo[]; }; }>(url, null, { includeDigestInGet: true });
+        let result = await GetJson<{ d: { results: IAttachmentInfo[]; }; }>(url, null, {
+            includeDigestInGet: true,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         let attachmentFiles = result.d && result.d.results ? result.d.results : [];
         return attachmentFiles;
     } catch (e) {
@@ -219,7 +229,10 @@ export async function GetListItemsAttachments(siteUrl: string, listIdOrTitle: st
         return () => {
             let filter = `$filter=${chunk.map(i => `ID eq ${i}`).join(" or ")}`;
             let url = `${baseUrl}?${select}&${filter}&${expand}`
-            return GetJson<{ value: { Id: number, AttachmentFiles: IAttachmentInfo[] } }>(url, null, { includeDigestInGet: true, jsonMetadata: jsonTypes.nometadata });
+            return GetJson<{ value: { Id: number, AttachmentFiles: IAttachmentInfo[] } }>(url, null, {
+                includeDigestInGet: true, jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
         };
     });
     try {
@@ -238,7 +251,10 @@ export async function AddAttachment(siteUrl: string, listIdOrTitle: string, item
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/AttachmentFiles/add(FileName='${encodeURIComponentEX(filename, { singleQuoteMultiplier: 2 })}')`;
 
     try {
-        let result = await GetJson<{ d: IAttachmentInfo; }>(url, buffer, { includeDigestInPost: true, method: "POST" });
+        let result = await GetJson<{ d: IAttachmentInfo; }>(url, buffer, {
+            includeDigestInPost: true, method: "POST",
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         let attachmentFile = result && result.d;
         return attachmentFile;
     } catch (e) {
@@ -296,7 +312,10 @@ export async function UpdateMultiTaxonomyValue(siteUrl: string, listIdOrTitle: s
                 FieldValue: updates[field].map(v => `${v.Label}|${v.TermGuid};`).join(''),
                 HasException: false
             }))
-        }), { includeDigestInPost: true, method: "POST" });
+        }), {
+            includeDigestInPost: true, method: "POST",
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         return result && result.d && result.d.ValidateUpdateListItem.results.map(v => ({ field: v.FieldName, error: v.ErrorMEssage })) || [];
     } catch (e) {
         logger.error(`Error updating UpdateMultiTaxonomyValue ${e}`);
@@ -353,7 +372,10 @@ export async function UpdateItem(siteUrl: string, listIdOrTitle: string, itemId:
         var xHttpMethod: "MERGE" = isNewItem ? null : "MERGE";
 
         try {
-            let result = await GetJson<{ d: { Id: number; }; }>(url, JSON.stringify(itemUpdateInfo), { method: "POST", xHttpMethod: xHttpMethod });
+            let result = await GetJson<{ d: { Id: number; }; }>(url, JSON.stringify(itemUpdateInfo), {
+                method: "POST", xHttpMethod: xHttpMethod,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
             if (result)
                 if (isNewItem)
                     itemId = result.d.Id;// update item will not return data. only new item will.
@@ -517,7 +539,10 @@ export async function SetItemCreatedModifiedInfo(siteUrl: string, listIdOrTitle:
                 FieldName: field,
                 FieldValue: updateValues[field]
             }))
-        }), { method: "POST" });
+        }), {
+            method: "POST",
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         return result && result.d && result.d.ValidateUpdateListItem.results.map(v => ({ field: v.FieldName, error: v.ErrorMEssage })) || [];
     } catch (e) {
         logger.error(`Error updating values ${e}`);
@@ -527,7 +552,10 @@ export async function SetItemCreatedModifiedInfo(siteUrl: string, listIdOrTitle:
 
 export async function ListItemHasUniquePermissions(siteUrl: string, listIdOrTitle: string, itemId: number): Promise<boolean> {
     let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/items(${itemId})/?$select=hasuniqueroleassignments`;
-    let has = await GetJson<{ HasUniqueRoleAssignments: boolean }>(url, undefined, { allowCache: false, jsonMetadata: jsonTypes.nometadata });
+    let has = await GetJson<{ HasUniqueRoleAssignments: boolean }>(url, undefined, {
+        allowCache: false, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return has.HasUniqueRoleAssignments === true;
 }
 export async function RestoreListItemPermissionInheritance(siteUrl: string, listIdOrTitle: string, itemId: number): Promise<void> {
@@ -557,7 +585,10 @@ export async function GetItemEffectiveBasePermissions(siteUrlOrId: string, listI
             };
         };
     }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})/EffectiveBasePermissions`, null,
-        { ...shortLocalCache });
+        {
+            ...shortLocalCache,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
     return response.d.EffectiveBasePermissions;
 }

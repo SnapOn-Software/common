@@ -227,7 +227,8 @@ export class SPPeopleSearchService {
                     headers: {
                         Accept: jsonTypes.standard,
                         "content-type": contentTypes.json
-                    }
+                    },
+                    spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
                 })
 
             if (userDataResp && userDataResp.value && userDataResp.value.length > 0) {

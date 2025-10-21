@@ -46,7 +46,8 @@ export function GetListIdFromPageSync(siteUrl: string, listPageUrl: string): str
     let url = `${GetRestBaseUrl(siteUrl)}/web/getlist('${makeServerRelativeUrl(listPageUrl.split('?')[0].split('#')[0])}')?$select=id`;
     let response = GetJsonSync<{ Id: string; }>(url, null, {
         ...longLocalCache,
-        jsonMetadata: jsonTypes.nometadata
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
     if (!isNullOrUndefined(response) && response.success) {
         let listId = response.result.Id;
@@ -96,7 +97,8 @@ export async function EnsureSitePagesLibrary(siteUrl: string): Promise<IGetSiteP
         method: "POST",
         jsonMetadata: jsonTypes.nometadata,
         includeDigestInPost: true,
-        ...longLocalCache
+        ...longLocalCache,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
 
     if (!isNullOrUndefined(response) && !isNullOrUndefined(response.RootFolder)) {
@@ -120,7 +122,10 @@ export function GetSiteAssetLibrary(siteUrl: string, sync?: boolean): IGetSiteAs
 
     let caller = sync ? GetJsonSync : GetJson;
 
-    let result = caller<IGetSiteAssetLibraryReturnValue>(reqUrl, null, { ...longLocalCache, jsonMetadata: jsonTypes.nometadata });
+    let result = caller<IGetSiteAssetLibraryReturnValue>(reqUrl, null, {
+        ...longLocalCache, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
 
     let transform: (v: IGetSiteAssetLibraryReturnValue) => IGetSiteAssetLibraryResult = (v) => {
         if (isNotEmptyArray(v && v.value)) {
@@ -144,11 +149,12 @@ export function GetSiteAssetLibrary(siteUrl: string, sync?: boolean): IGetSiteAs
 export function GetListTitle(siteUrl: string, listIdOrTitle: string): Promise<string> {
     siteUrl = GetSiteUrl(siteUrl);
 
-    return GetJson<{ d: { Title: string; }; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/Title`, null, { allowCache: true })
-        .then(r => {
-            return r.d.Title;
-        })
-        .catch<string>(() => null);
+    return GetJson<{ d: { Title: string; }; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/Title`, null, {
+        allowCache: true,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    }).then(r => {
+        return r.d.Title;
+    }).catch<string>(() => null);
 }
 
 /** Return the list */
@@ -165,49 +171,50 @@ export function GetList(siteUrlOrId: string, listIdOrTitle: string, options?: {
         return null;
     }
 
-    return GetJson<{ d: iList; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, { allowCache: true })
-        .then(async r => {
-            let list = r.d;
-            if (options) {
-                let promises = [];
+    return GetJson<{ d: iList; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, {
+        allowCache: true,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    }).then(async r => {
+        let list = r.d;
+        if (options) {
+            let promises = [];
 
-                if (options.includeViews) {
-                    promises.push(GetListViews(siteUrl, listIdOrTitle, options.viewOptions, refreshCache).then((r) => {
-                        list.Views = r;
-                    }))
-                }
-                if (options.includeContentTypes) {
-                    promises.push(GetListContentTypes(siteUrl, listIdOrTitle, null, refreshCache).then((r) => {
-                        list.ContentTypes = r;
-                    }));
-                }
-                if (options.includeRootFolder) {
-                    promises.push(GetListRootFolder(siteUrl, listIdOrTitle).then((r) => {
-                        list.RootFolder = r;
-                    }));
-                }
-                if (options.includeEventReceivers) {
-                    promises.push(GetListEventReceivers(siteUrl, listIdOrTitle, refreshCache).then((r) => {
-                        list.EventReceivers = r;
-                    }));
-                }
-
-                if (promises.length > 0) {
-                    await Promise.all(promises);
-                }
+            if (options.includeViews) {
+                promises.push(GetListViews(siteUrl, listIdOrTitle, options.viewOptions, refreshCache).then((r) => {
+                    list.Views = r;
+                }))
+            }
+            if (options.includeContentTypes) {
+                promises.push(GetListContentTypes(siteUrl, listIdOrTitle, null, refreshCache).then((r) => {
+                    list.ContentTypes = r;
+                }));
+            }
+            if (options.includeRootFolder) {
+                promises.push(GetListRootFolder(siteUrl, listIdOrTitle).then((r) => {
+                    list.RootFolder = r;
+                }));
+            }
+            if (options.includeEventReceivers) {
+                promises.push(GetListEventReceivers(siteUrl, listIdOrTitle, refreshCache).then((r) => {
+                    list.EventReceivers = r;
+                }));
             }
 
-            if (list.EffectiveBasePermissions
-                && (isString(list.EffectiveBasePermissions.High) || isString(list.EffectiveBasePermissions.Low))) {
-                list.EffectiveBasePermissions = {
-                    High: Number(list.EffectiveBasePermissions.High),
-                    Low: Number(list.EffectiveBasePermissions.Low)
-                };
+            if (promises.length > 0) {
+                await Promise.all(promises);
             }
+        }
 
-            return list;
-        })
-        .catch<iList>(() => null);
+        if (list.EffectiveBasePermissions
+            && (isString(list.EffectiveBasePermissions.High) || isString(list.EffectiveBasePermissions.Low))) {
+            list.EffectiveBasePermissions = {
+                High: Number(list.EffectiveBasePermissions.High),
+                Low: Number(list.EffectiveBasePermissions.Low)
+            };
+        }
+
+        return list;
+    }).catch<iList>(() => null);
 }
 /** Return the list */
 export function GetListSync(siteUrl: string, listIdOrTitle: string): iList {
@@ -215,7 +222,10 @@ export function GetListSync(siteUrl: string, listIdOrTitle: string): iList {
 
     if (isNullOrEmptyString(listIdOrTitle)) return null;
 
-    let result = GetJsonSync<{ d: iList; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, shortLocalCache);
+    let result = GetJsonSync<{ d: iList; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, {
+        ...shortLocalCache,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     if (result && result.success) {
         let list = result.result.d;
 
@@ -249,7 +259,10 @@ export function GetListRootFolder(siteUrlOrId: string, listIdOrTitle: string): P
     return GetJson<{
         d: { ServerRelativeUrl: string; Name: string; };
     }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/RootFolder?$Select=Name,ServerRelativeUrl`,
-        null, longLocalCache)
+        null, {
+        ...longLocalCache,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    })
         .then(r => {
             return r.d;
         })
@@ -262,7 +275,10 @@ export function GetListRootFolderSync(siteUrlOrId: string, listIdOrTitle: string
     let result = GetJsonSync<{
         d: { ServerRelativeUrl: string; Name: string; };
     }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/RootFolder?$Select=Name,ServerRelativeUrl`,
-        null, longLocalCache);
+        null, {
+        ...longLocalCache,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
 
     return SafeIfElse(() => result.result.d, null);
 }
@@ -278,7 +294,10 @@ export function GetListField(siteUrlOrId: string, listIdOrTitle: string, fieldId
         url += `/getbyinternalnameortitle(@u)?@u='${encodeURIComponent(fieldIdOrName)}'`;
     }
 
-    let result = GetJson<{ d: IFieldInfo; }>(url, null, { allowCache: refreshCache !== true })
+    let result = GetJson<{ d: IFieldInfo; }>(url, null, {
+        allowCache: refreshCache !== true,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    })
         .then(r => {
             return r.d;
         })
@@ -323,7 +342,8 @@ export function GetListFields(siteUrlOrId: string, listIdOrTitle: string, option
 
     let restOptions: IRestOptions = {
         allowCache: options.refreshCache !== true,
-        jsonMetadata: jsonTypes.nometadata
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     };
 
     return GetJson<{ value: IFieldInfo[]; }>(url, null, restOptions)
@@ -340,7 +360,8 @@ export function GetListFieldsSync(siteUrlOrId: string, listIdOrTitle: string, op
 
     let restOptions: IRestOptions = {
         allowCache: options.refreshCache !== true,
-        jsonMetadata: jsonTypes.nometadata
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     };
 
     let result = GetJsonSync<{ value: IFieldInfo[]; }>(url, null, restOptions);
@@ -378,7 +399,10 @@ export function GetListWorkflows(siteUrl: string, listIdOrTitle: string, refresh
     return GetJson<{
         d: { results: IListWorkflowAssociation[]; };
     }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/workflowAssociations`,
-        null, { allowCache: refreshCache !== true })
+        null, {
+        allowCache: refreshCache !== true,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    })
         .then(r => {
             if (r && r.d && isNotEmptyArray(r.d.results)) {
                 r.d.results.forEach(wf => {
@@ -404,7 +428,10 @@ export async function GetListEffectiveBasePermissions(siteUrlOrId: string, listI
             };
         };
     }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
-        { ...shortLocalCache });
+        {
+            ...shortLocalCache,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
     return response.d.EffectiveBasePermissions;
 }
@@ -419,7 +446,10 @@ export function GetListEffectiveBasePermissionsSync(siteUrlOrId: string, listIdO
             };
         };
     }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/EffectiveBasePermissions`, null,
-        { ...shortLocalCache });
+        {
+            ...shortLocalCache,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
     return response.result.d.EffectiveBasePermissions;
 }
@@ -505,7 +535,9 @@ export async function CreateField(siteUrl: string, listIdOrTitle: string, option
                 }
             };
             let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/fields/createFieldAsXml`;
-            let newFieldResult = await GetJson<{ d: IFieldInfo; }>(url, JSON.stringify(updateObject));
+            let newFieldResult = await GetJson<{ d: IFieldInfo; }>(url, JSON.stringify(updateObject), {
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
 
             if (!isNullOrUndefined(newFieldResult)
                 && !isNullOrUndefined(newFieldResult.d)) {
@@ -543,7 +575,9 @@ export async function CreateField(siteUrl: string, listIdOrTitle: string, option
 
         try {
             let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/fields`;
-            let newFieldResult = await GetJson<{ d: IFieldInfo; }>(url, JSON.stringify(updateObject));
+            let newFieldResult = await GetJson<{ d: IFieldInfo; }>(url, JSON.stringify(updateObject), {
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
             return finish(newFieldResult && newFieldResult.d);
         } catch {
         }
@@ -637,7 +671,10 @@ export async function UpdateField(siteUrlOrId: string, listIdOrTitle: string, fi
 
     if (Object.keys(updates).length > 1) {
         return GetJson(GetListRestUrl(siteUrl, listIdOrTitle) + `/fields/getbyinternalnameortitle('${fieldInternalName}')`,
-            JSON.stringify(updates), { xHttpMethod: "MERGE" })
+            JSON.stringify(updates), {
+            xHttpMethod: "MERGE",
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        })
             .then(r => {
                 return finish();
             })
@@ -755,7 +792,8 @@ export async function DeleteField(siteUrl: string, listIdOrTitle: string, fieldI
 
     return GetJson(GetListRestUrl(siteUrl, listIdOrTitle) + `/fields/getbyinternalnameortitle('${fieldInternalName}')`, null, {
         method: "POST",
-        xHttpMethod: "DELETE"
+        xHttpMethod: "DELETE",
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     })
         .then(r => true)
         .catch<boolean>((e) => false);
@@ -770,7 +808,10 @@ export function GetListViews(siteUrl: string, listIdOrTitle: string, options?: I
     return GetJson<{
         value: iListView[];
     }>(url,
-        null, { allowCache: refreshCache !== true, jsonMetadata: jsonTypes.nometadata })
+        null, {
+        allowCache: refreshCache !== true, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    })
         .then(r => {
             let views = r.value;
             if (isNotEmptyArray(views)) {
@@ -793,7 +834,10 @@ export function GetListViewsSync(siteUrl: string, listIdOrTitle: string, options
     let response = GetJsonSync<{
         value: iListView[];
     }>(url,
-        null, { allowCache: refreshCache !== true, jsonMetadata: jsonTypes.nometadata });
+        null, {
+        allowCache: refreshCache !== true, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     if (response.success) {
         let views = response && response.result && response.result.value;
         if (isNotEmptyArray(views)) {
@@ -846,7 +890,10 @@ async function _addOrRemoveViewField(siteUrl: string, listIdOrTitle: string, vie
     try {
         let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/views('${normalizeGuid(view.Id)}')/viewfields/${action}('${viewField}')`;
 
-        let result = await GetJson<{ d: { AddViewField?: null; RemoveViewField?: null; } }>(url, null, { method: "POST", allowCache: false });
+        let result = await GetJson<{ d: { AddViewField?: null; RemoveViewField?: null; } }>(url, null, {
+            method: "POST", allowCache: false,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         if (result && (result.d.AddViewField === null || result.d.RemoveViewField === null)) {
             return true;
         }
@@ -959,7 +1006,8 @@ export async function GetListItems(siteUrl: string, listIdOrTitle: string, optio
                 "odata.nextLink": string;
             }>(info.requestUrl, null, {
                 allowCache: options.refreshCache !== true,
-                jsonMetadata: options.jsonMetadata
+                jsonMetadata: options.jsonMetadata,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
             }));
             resultItems = requestResult.value;
             next = requestResult["odata.nextLink"];
@@ -971,7 +1019,8 @@ export async function GetListItems(siteUrl: string, listIdOrTitle: string, optio
                     __next?: string;
                 };
             }>(info.requestUrl, null, {
-                allowCache: options.refreshCache !== true
+                allowCache: options.refreshCache !== true,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
             }));
             resultItems = requestResult.d.results;
             next = requestResult.d.__next;
@@ -1012,7 +1061,10 @@ export function GetListItemsSync(siteUrl: string, listIdOrTitle: string, options
             let requestResult = GetJsonSync<{
                 value: IRestItem[];
                 "odata.nextLink": string;
-            }>(info.requestUrl, null, { allowCache: true });
+            }>(info.requestUrl, null, {
+                allowCache: true,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
             if (requestResult.success) {
                 resultItems = requestResult.result.value;
                 next = requestResult.result["odata.nextLink"];
@@ -1021,7 +1073,10 @@ export function GetListItemsSync(siteUrl: string, listIdOrTitle: string, options
         else {
             let requestResult = GetJsonSync<{
                 d: { results: IRestItem[]; __next?: string; };
-            }>(info.requestUrl, null, { allowCache: true });
+            }>(info.requestUrl, null, {
+                allowCache: true,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
             if (requestResult.success) {
                 resultItems = requestResult.result.d.results;
                 next = requestResult.result.d.__next;
@@ -1142,7 +1197,8 @@ export async function GetListEventReceivers(siteUrl: string, listIdOrTitle: stri
         }>(url,
             null, {
             allowCache: refreshCache !== true,
-            jsonMetadata: jsonTypes.nometadata
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
 
         return !isNullOrUndefined(response) ? response.value : null;
@@ -1167,7 +1223,8 @@ export async function AddListEventReceiver(siteUrl: string, listIdOrTitle: strin
             jsonMetadata: jsonTypes.nometadata,
             headers: {
                 "content-type": contentTypes.json
-            }
+            },
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
 
         return !isNullOrUndefined(response) && isValidGuid(response.ReceiverId) ? response : null;
@@ -1183,7 +1240,8 @@ export async function DeleteListEventReceiver(siteUrl: string, listIdOrTitle: st
         let response = await GetJson<{ "odata.null": boolean }>(url, null, {
             method: "POST",
             includeDigestInPost: true,
-            jsonMetadata: jsonTypes.nometadata
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
 
         return !isNullOrUndefined(response) && response["odata.null"] === true;
@@ -1244,7 +1302,8 @@ export function GetListLastItemModifiedDate(siteUrl: string, listIdOrTitle: stri
     let result = caller<{ value: string; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/${endPoint}`, null, {
         allowCache: true,//in memory only
         jsonMetadata: jsonTypes.nometadata,
-        forceCacheUpdate: options && options.refreshCache === true || false
+        forceCacheUpdate: options && options.refreshCache === true || false,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
 
     if (isPromise(result))
@@ -1273,7 +1332,10 @@ export async function ReloadListLastModified(siteUrl: string, listIdOrTitle: str
 
 export async function ListHasUniquePermissions(siteUrl: string, listIdOrTitle: string): Promise<boolean> {
     let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/?$select=hasuniqueroleassignments`;
-    let has = await GetJson<{ HasUniqueRoleAssignments: boolean }>(url, undefined, { allowCache: false, jsonMetadata: jsonTypes.nometadata });
+    let has = await GetJson<{ HasUniqueRoleAssignments: boolean }>(url, undefined, {
+        allowCache: false, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return has.HasUniqueRoleAssignments === true;
 }
 export async function RestoreListPermissionInheritance(siteUrl: string, listIdOrTitle: string): Promise<void> {
@@ -1359,18 +1421,20 @@ export async function CreateList(siteUrl: string, info: {
         Title: info.title
     };
 
-    let newList = (await GetJson<{ d: iCreateListResult }>(url, jsonStringify(body))).d;
+    let newList = (await GetJson<{ d: iCreateListResult }>(url, jsonStringify(body), {
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    })).d;
     normalizeGuid(newList.Id);
     return newList;
 }
 
-export async function RecycleList(siteUrl: string, listIdOrTitle: string): Promise<{ recycled: boolean; errorMessage?: string}> {
+export async function RecycleList(siteUrl: string, listIdOrTitle: string): Promise<{ recycled: boolean; errorMessage?: string }> {
     siteUrl = GetSiteUrl(siteUrl);
     const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/recycle()`;
     const result: { recycled: boolean; errorMessage?: string; } = { recycled: true };
 
     try {
-        await GetJson<{ d: {Recycle: string; } }>(
+        await GetJson<{ d: { Recycle: string; } }>(
             url, null,
             {
                 method: "POST",
@@ -1491,7 +1555,10 @@ export async function SearchList(siteUrl: string, listIdOrTitle: string, query: 
                     TotalRowsIncludingDuplicates: number
                 }
             },
-        }>(url, null, { jsonMetadata: jsonTypes.nometadata });
+        }>(url, null, {
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         logger.json(result.PrimaryQueryResult.RelevantResults, `search ${query}`);
         let rows = result.PrimaryQueryResult.RelevantResults.Table.Rows;
 
@@ -1561,7 +1628,8 @@ export async function UpdateListExperience(siteUrl: string, listId: string, expe
         };
         let result = await GetJson(url, JSON.stringify(data), {
             xHttpMethod: "MERGE",
-            jsonMetadata: jsonTypes.nometadata
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
         return isNullOrEmptyString(result);
     } catch (e) {
@@ -1578,7 +1646,8 @@ export async function GetListVersionSettings(siteUrlOrId: string, listIdOrTitle:
     try {
         const result = await GetJson<iListVersionSettings>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=EnableMinorVersions,EnableVersioning,DraftVersionVisibility,MajorWithMinorVersionsLimit,MajorVersionLimit,EnableModeration`, null, {
             allowCache: options && options.refreshCache ? false : true,
-            jsonMetadata: jsonTypes.nometadata
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
         return result;
     } catch {

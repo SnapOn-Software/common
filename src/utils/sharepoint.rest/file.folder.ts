@@ -25,7 +25,9 @@ export async function EnsureFolderPath(siteUrl: string, folderServerRelativeUrl:
     }
 
     let url = `${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${folderServerRelativeUrl}')?$select=exists`;
-    let folder = await GetJson<{ d: { Exists: boolean; }; }>(url);
+    let folder = await GetJson<{ d: { Exists: boolean; }; }>(url, null, {
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     if (folder && folder.d.Exists) {
         existingFolders.push(folderServerRelativeUrl);
         return true;
@@ -67,7 +69,8 @@ export function DeleteFolder(siteUrl: string, folderUrl: string): Promise<boolea
 
     return GetJson(requestUrl, null, {
         method: "POST",
-        xHttpMethod: "DELETE"
+        xHttpMethod: "DELETE",
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     })
         .then(r => true)
         .catch<boolean>((e) => false);
@@ -79,7 +82,9 @@ export function GetFolderFiles(siteUrl: string, folderUrl: string): Promise<IFil
     var requestUrl = `${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${folderUrl}')`
         + `/files?$select=Level,Exists,Name,ServerRelativeUrl,Title,TimeCreated,TimeLastModified,ListItemAllFields/OData__ModerationStatus&$expand=ListItemAllFields`;
 
-    return GetJson<{ d: { results: IFileInfoWithModerationStatus[]; }; }>(requestUrl).then(r => {
+    return GetJson<{ d: { results: IFileInfoWithModerationStatus[]; }; }>(requestUrl, null, {
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    }).then(r => {
         return r.d && r.d.results || [];
     }).catch<IFileInfoWithModerationStatus[]>(() => {
         return [];
@@ -182,7 +187,8 @@ async function _moderateFile(siteUrl: string, fileUrl: string, action: "publish"
         let publishResult = await GetJson<{ "odata.null": boolean }>(publishUrl, null, {
             method: "POST",
             jsonMetadata: jsonTypes.nometadata,
-            includeDigestInPost: true
+            includeDigestInPost: true,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
         return !isNullOrUndefined(publishResult) && publishResult["odata.null"] === true;
     } catch {
@@ -199,7 +205,8 @@ export function RecycleFile(siteUrl: string, fileServerRelativeUrl: string): Pro
         method: "POST",
         headers: {
             "IF-MATCH": "*"
-        }
+        },
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     })
         .then(r => true)
         .catch<boolean>((e) => false);
@@ -212,7 +219,8 @@ export function DeleteFile(siteUrl: string, fileServerRelativeUrl: string): Prom
 
     return GetJson(fileRestUrl, null, {
         method: "POST",
-        xHttpMethod: "DELETE"
+        xHttpMethod: "DELETE",
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     })
         .then(r => true)
         .catch<boolean>((e) => false);
@@ -246,6 +254,8 @@ export function GetFileSync<T>(siteUrl: string, fileServerRelativeUrl: string, r
     if (!restOptions.forceCacheUpdate && reloadCacheFileModifiedRecently(siteUrl, fileServerRelativeUrl)) {
         restOptions.forceCacheUpdate = true;
     }
+
+    restOptions.spWebUrl = siteUrl;//allow getDigest to work when not in SharePoint
 
     let response = GetJsonSync<T>(`${fileRestUrl}/$value`, null, restOptions);
     if (response && response.success)
@@ -300,6 +310,8 @@ export async function GetFileEx<T>(siteUrl: string, fileServerRelativeUrl: strin
         restOptions.forceCacheUpdate = true;
     }
 
+    restOptions.spWebUrl = siteUrl;//allow getDigest to work when not in SharePoint
+
     return GetJson<T>(`${fileRestUrl}${versionPart}/$value`, null, restOptions).then(r => {
         return {
             Exists: true,
@@ -343,6 +355,8 @@ export async function GetFileVersionHistory(siteUrl: string, fileServerRelativeU
         restOptions.forceCacheUpdate = true;
     }
 
+    restOptions.spWebUrl = siteUrl;//allow getDigest to work when not in SharePoint
+
     try {
         const result = await GetJson<{ value: iFileVersionInfo[] }>(`${fileRestUrl}/versions`, null, restOptions);
         //Created will come in as string
@@ -381,7 +395,8 @@ function reloadCacheFileModifiedRecently(siteUrl: string, fileServerRelativeUrl:
             let fileInfo = GetJsonSync<{ TimeLastModified: string; }>(`${fileRestUrl}?$select=TimeLastModified`,
                 null, {
                 allowCache: true,//only allow in-memory cache for this
-                jsonMetadata: jsonTypes.nometadata
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
             });
             if (fileInfo.success && fileInfo.result) {
                 let modified = new Date(fileInfo.result.TimeLastModified);
@@ -415,7 +430,10 @@ export async function GetFileSize(siteUrl: string, fileServerRelativeUrlOrListId
         allowCache = itemIdOrAllowCache === true;
         requestUrl = GetFileRestUrl(siteUrl, fileServerRelativeUrlOrListId);
     }
-    let options: IRestOptions = { allowCache: allowCache === true, jsonMetadata: jsonTypes.nometadata };
+    let options: IRestOptions = {
+        allowCache: allowCache === true, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    };
 
     try {
         let result = await GetJson<{ vti_x005f_filesize: number; }>(`${requestUrl}/Properties?$select=vti_x005f_filesize`, null, options);
@@ -435,7 +453,10 @@ export async function GetListFolders(siteUrl: string, listIdOrTitle: string): Pr
     try {
         let requestResult = (await GetJson<{
             value: { Folder: IFolderBasicInfo; }[];
-        }>(url, null, { allowCache: true, jsonMetadata: jsonTypes.nometadata }));
+        }>(url, null, {
+            allowCache: true, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        }));
 
         if (isNotEmptyArray(requestResult && requestResult.value)) {
             results = requestResult.value.map(f => ({
@@ -475,7 +496,8 @@ export async function GetFolder(siteUrl: string, folderUrl: string, options: { a
             null,
             {
                 ...(options.allowCache ? mediumLocalCache : noLocalCache),
-                jsonMetadata: jsonTypes.nometadata
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
             });
         return result;
     } catch {
@@ -486,21 +508,30 @@ export async function GetFolder(siteUrl: string, folderUrl: string, options: { a
 export async function GetFileItemId(siteUrl: string, fileServerRelativeUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
     const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/ListItemAllFields/id`;
-    const result = await GetJson<{ value: number; }>(restUrl, null, { jsonMetadata: jsonTypes.nometadata });
+    const result = await GetJson<{ value: number; }>(restUrl, null, {
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return result.value;
 }
 
 export async function GetFileModerationStatus(siteUrl: string, fileServerRelativeUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
     const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/ListItemAllFields/OData__ModerationStatus`;
-    const result = await GetJson<{ value: ModerationStatus; }>(restUrl, null, { jsonMetadata: jsonTypes.nometadata });
+    const result = await GetJson<{ value: ModerationStatus; }>(restUrl, null, {
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return result.value;
 }
 
 export async function GetFilePublishingStatus(siteUrl: string, fileServerRelativeUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
     const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/level`;
-    const result = await GetJson<{ value: FileLevel; }>(restUrl, null, { jsonMetadata: jsonTypes.nometadata });
+    const result = await GetJson<{ value: FileLevel; }>(restUrl, null, {
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return result.value;
 }
 
@@ -517,7 +548,8 @@ export async function GetFileItemInfo(siteUrl: string, fileServerRelativeUrl: st
                 Id: number;
             }
         }>(restUrl, null, {
-            jsonMetadata: jsonTypes.verbose
+            jsonMetadata: jsonTypes.verbose,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
 
         const itemId = result.d.Id;
@@ -542,7 +574,10 @@ export async function GetFolderItemInfo(siteUrl: string, folderServerRelativeUrl
                 },
                 Id: number;
             }
-        }>(restUrl, null, { jsonMetadata: jsonTypes.verbose });
+        }>(restUrl, null, {
+            jsonMetadata: jsonTypes.verbose,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
         const itemId = result.d.Id;
         const listId = result.d.__metadata.uri.split("'")[1];
@@ -591,7 +626,10 @@ export async function CreateAppPage(siteUrl: string, info: {
         const restUrl = `${GetRestBaseUrl(siteUrl)}/SitePages/Pages/CreateAppPage`;
         const result = await GetJson<iWebPartPageResult>(restUrl, jsonStringify({
             webPartDataAsJson: jsonStringify(webPartDataAsJson)
-        }), { method: 'POST', jsonMetadata: jsonTypes.nometadata });
+        }), {
+            method: 'POST', jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         log(`created page`);
         log(jsonStringify(result));
 
@@ -603,7 +641,10 @@ export async function CreateAppPage(siteUrl: string, info: {
             pageId: fileId,
             title: info.name,
             webPartDataAsJson: jsonStringify(webPartDataAsJson)
-        }), { method: 'POST', jsonMetadata: jsonTypes.nometadata });
+        }), {
+            method: 'POST', jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
         log(`updated page`);
         log(jsonStringify(updateResult));
@@ -670,7 +711,8 @@ async function CopyOrMoveFile(siteUrl: string, currentServerRelativeUrl: string,
 
         let result = await GetJson(url, undefined, {
             method: "POST",
-            jsonMetadata: jsonTypes.nometadata
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         });
         logger.json(result, "CopyOrMoveFile");
         return true;

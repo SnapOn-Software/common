@@ -17,8 +17,12 @@ export async function GetNavigationLinks(siteUrl?: string): Promise<INavLinkInfo
     const sideNavUrl = `${GetRestBaseUrl(siteUrl)}/web/navigation/quicklaunch`;
 
     try {
-        const topNavResponse = await GetJson<{ d: { results: INavLinkInfo[] } }>(topNavUrl);
-        const sideNavResponse = await GetJson<{ d: { results: INavLinkInfo[] } }>(sideNavUrl);
+        const topNavResponse = await GetJson<{ d: { results: INavLinkInfo[] } }>(topNavUrl, null, {
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
+        const sideNavResponse = await GetJson<{ d: { results: INavLinkInfo[] } }>(sideNavUrl, null, {
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
         const topNavLinks: INavLinkInfo[] = topNavResponse.d.results.map((link: INavLinkInfo) => ({ ...link, Location: "topnavigationbar" }));
         const sideNavLinks: INavLinkInfo[] = sideNavResponse.d.results.map((link: INavLinkInfo) => ({ ...link, Location: "quicklaunch" }));

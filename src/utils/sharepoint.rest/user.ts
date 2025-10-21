@@ -26,7 +26,10 @@ export function GetUserLoginName(siteUrl?: string): Promise<string> {
         //issue 6309 _spPageContextInfo.userLoginName is wrong for external users
         return Promise.resolve(_spPageContextInfo.userPrincipalName);
 
-    return GetJson<{ d: { LoginName: string; }; }>(GetRestBaseUrl(siteUrl) + "/web/currentUser/loginName", null, { ...longLocalCache })
+    return GetJson<{ d: { LoginName: string; }; }>(GetRestBaseUrl(siteUrl) + "/web/currentUser/loginName", null, {
+        ...longLocalCache,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    })
         .then(r => r.d.LoginName)
         .catch<string>(() => null);
 }
@@ -39,7 +42,10 @@ export function GetUserLoginNameSync(siteUrl?: string): string {
         //issue 6309 _spPageContextInfo.userLoginName is wrong for external users
         return _spPageContextInfo.userPrincipalName;
 
-    let res = GetJsonSync<{ d: { LoginName: string; }; }>(GetRestBaseUrl(siteUrl) + "/web/currentUser/loginName", null, { ...longLocalCache });
+    let res = GetJsonSync<{ d: { LoginName: string; }; }>(GetRestBaseUrl(siteUrl) + "/web/currentUser/loginName", null, {
+        ...longLocalCache,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     if (res.success)
         return res.result.d.LoginName;
     else return null;
@@ -58,7 +64,8 @@ export async function GetCurrentUser(siteUrl?: string, options?: { expandGroups:
     return GetJson<IUserInfo>(_getCurrentUserRequestUrl(siteUrl, options && options.expandGroups), null,
         {
             ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
-            allowCache: !options || options.refreshCache !== true
+            allowCache: !options || options.refreshCache !== true,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         })
         .then(user => {
             if (user)
@@ -75,7 +82,10 @@ export function GetCurrentUserSync(siteUrl?: string, options?: {
     siteUrl = GetSiteUrl(siteUrl);
 
     let res = GetJsonSync<IUserInfo>(_getCurrentUserRequestUrl(siteUrl, options && options.expandGroups), null,
-        { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+        {
+            ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
     if (res.success) {
         let user = res.result;
         if (user)
@@ -101,7 +111,8 @@ export async function GetUser(siteUrl?: string, userId?: number, options?: {
 
     if (isNullOrNaN(userId) || __currentUserId === userId) return GetCurrentUser(siteUrl, options);
     return GetJson<IUserInfo>(_getUserRequestUrl(siteUrl, userId, options && options.expandGroups), null, {
-        ...shortLocalCache, jsonMetadata: jsonTypes.nometadata
+        ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     }).then(user => {
         return user;
     }).catch<IUserInfo>(() => null);
@@ -113,7 +124,10 @@ export function GetUserSync(siteUrl?: string, userId?: number, options?: { expan
     if (isNullOrNaN(userId) || __currentUserId === userId) return GetCurrentUserSync(siteUrl, options);
 
     let res = GetJsonSync<IUserInfo>(_getUserRequestUrl(siteUrl, userId, options && options.expandGroups), null,
-        { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+        {
+            ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
     if (res.success) {
         let user = res.result;
         return user;
@@ -136,7 +150,10 @@ export async function GetUserByLogin(siteUrl?: string, loginName?: string, optio
     }
 
     return GetJson<IUserInfo>(_getUserByLoginNameRequestUrl(siteUrl, loginName, options && options.expandGroups), null,
-        { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata })
+        {
+            ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        })
         .then(user => user)
         .catch<IUserInfo>(() => null);
 }
@@ -149,7 +166,10 @@ export function GetUserByLoginSync(siteUrl?: string, loginName?: string, options
     }
 
     let res = GetJsonSync<IUserInfo>(_getUserByLoginNameRequestUrl(siteUrl, loginName, options && options.expandGroups), null,
-        { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+        {
+            ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
     if (res.success) {
         let user = res.result;
         return user;
@@ -212,7 +232,10 @@ export async function GetSecurityGroupByTitle(siteUrl: string, title: string): P
     var url = `${GetRestBaseUrl(siteUrl)}/web/siteusers?$filter=PrincipalType eq ${PrincipalType.SecurityGroup}`;
 
     return GetJson<{ value: IUserInfo[]; }>(url, null,
-        { method: "GET", jsonMetadata: jsonTypes.nometadata, ...shortLocalCache })
+        {
+            method: "GET", jsonMetadata: jsonTypes.nometadata, ...shortLocalCache,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        })
         .then(securityGroupsResult => {
             var securityGroup: IUserInfo = null;
             if (securityGroupsResult && securityGroupsResult.value && securityGroupsResult.value.length) {
@@ -243,7 +266,10 @@ export function GetSecurityGroupByTitleSync(siteUrl: string, title: string): IUs
     var url = `${GetRestBaseUrl(siteUrl)}/web/siteusers?$filter=PrincipalType eq ${PrincipalType.SecurityGroup}`;
 
     let securityGroupsResult = GetJsonSync<{ value: IUserInfo[]; }>(url, null,
-        { method: "GET", jsonMetadata: jsonTypes.nometadata, ...shortLocalCache });
+        {
+            method: "GET", jsonMetadata: jsonTypes.nometadata, ...shortLocalCache,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
     if (securityGroupsResult && securityGroupsResult.success) {
         var securityGroup: IUserInfo = null;
@@ -286,7 +312,8 @@ export async function GetGroup(siteUrl?: string, groupId?: number, options?: {
     return GetJson<IGroupInfo>(_getGroupRequestUrl(siteUrl, groupId), null,
         {
             ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
-            allowCache: !options || options.refreshCache !== true
+            allowCache: !options || options.refreshCache !== true,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
         })
         .then(async group => {
             if (group) {
@@ -295,7 +322,8 @@ export async function GetGroup(siteUrl?: string, groupId?: number, options?: {
                 if (options && options.expandUsers && group.CanCurrentUserViewMembership) {
                     let users = await GetJson<{ value: IUserInfo[]; }>(_getGroupUsersRequestUrl(siteUrl, groupId), null, {
                         ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
-                        allowCache: !options || options.refreshCache !== true
+                        allowCache: !options || options.refreshCache !== true,
+                        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
                     });
                     group.Users = users && users.value;
                 }
@@ -309,14 +337,20 @@ export function GetGroupSync(siteUrl?: string, groupId?: number, options?: { exp
     siteUrl = GetSiteUrl(siteUrl);
 
     let res = GetJsonSync<IGroupInfo>(_getGroupRequestUrl(siteUrl, groupId), null,
-        { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+        {
+            ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
     if (res.success) {
         let group = res.result;
         if (group) {
             group.PrincipalType = PrincipalType.SharePointGroup;
             group.LoginName = group.Title;
             if (options && options.expandUsers && group.CanCurrentUserViewMembership) {
-                let users = GetJsonSync<{ value: IUserInfo[]; }>(_getGroupUsersRequestUrl(siteUrl, groupId), null, { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+                let users = GetJsonSync<{ value: IUserInfo[]; }>(_getGroupUsersRequestUrl(siteUrl, groupId), null, {
+                    ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+                    spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+                });
                 group.Users = users.success && users.result && users.result.value;
             }
         }
@@ -343,7 +377,10 @@ export async function GetGroupByName(siteUrl: string, groupName: string, options
     siteUrl = GetSiteUrl(siteUrl);
 
     let res = await GetJson<{ d: { results: IGroupInfo[]; }; }>(_getGroupByNameRequestUrl(siteUrl, groupName), null,
-        { ...shortLocalCache, allowCache: !options || options.refreshCache !== true });
+        {
+            ...shortLocalCache, allowCache: !options || options.refreshCache !== true,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
     if (res) {
         let group = res && res.d && res.d.results && res.d.results[0];
@@ -353,7 +390,8 @@ export async function GetGroupByName(siteUrl: string, groupName: string, options
             if (options && options.expandUsers && group.CanCurrentUserViewMembership) {
                 let users = GetJsonSync<{ value: IUserInfo[]; }>(_getGroupUsersRequestUrl(siteUrl, group.Id), null, {
                     ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
-                    allowCache: !options || options.refreshCache !== true
+                    allowCache: !options || options.refreshCache !== true,
+                    spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
                 });
                 group.Users = users.success && users.result && users.result.value;
             }
@@ -367,14 +405,20 @@ export function GetGroupByNameSync(siteUrl: string, groupName: string, options?:
     siteUrl = GetSiteUrl(siteUrl);
 
     let res = GetJsonSync<{ value: IGroupInfo[]; }>(_getGroupByNameRequestUrl(siteUrl, groupName), null,
-        { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+        {
+            ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
     if (res.success) {
         let group = res.result && res.result.value && res.result.value[0];
         if (group) {
             group.PrincipalType = PrincipalType.SharePointGroup;
             group.LoginName = group.Title;
             if (options && options.expandUsers && group.CanCurrentUserViewMembership) {
-                let users = GetJsonSync<{ value: IUserInfo[]; }>(_getGroupUsersRequestUrl(siteUrl, group.Id), null, { ...shortLocalCache, jsonMetadata: jsonTypes.nometadata });
+                let users = GetJsonSync<{ value: IUserInfo[]; }>(_getGroupUsersRequestUrl(siteUrl, group.Id), null, {
+                    ...shortLocalCache, jsonMetadata: jsonTypes.nometadata,
+                    spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+                });
                 group.Users = users.success && users.result && users.result.value;
             }
         }
@@ -386,7 +430,10 @@ export function GetGroupByNameSync(siteUrl: string, groupName: string, options?:
 export async function GetSiteGroups(siteUrl: string, refreshCache?: boolean) {
     siteUrl = GetSiteUrl(siteUrl);
     let res = await GetJson<{ d: { results: IGroupInfo[]; }; }>(_getGroupsRequestUrl(siteUrl), null,
-        { ...shortLocalCache, allowCache: refreshCache !== true });
+        {
+            ...shortLocalCache, allowCache: refreshCache !== true,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
 
     if (res) {
         let groups = res && res.d && res.d.results || [];
@@ -428,7 +475,10 @@ export async function CreateSiteGroup(siteUrl: string, info: { name: string, des
         },
         Title: info.name,
         Description: info.description
-    }), { allowCache: false });
+    }), {
+        allowCache: false,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
     return createGroup.d;
 }
 export async function AddUserToGroup(siteUrl: string, groupId: number, userIdOrLogin: number | string): Promise<void> {
@@ -440,12 +490,18 @@ export async function AddUserToGroup(siteUrl: string, groupId: number, userIdOrL
 
     await GetJson(url, jsonStringify({
         LoginName: userIdOrLogin
-    }), { allowCache: false, jsonMetadata: jsonTypes.nometadata });
+    }), {
+        allowCache: false, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
 
 }
 export async function RemoveUserFromGroup(siteUrl: string, groupId: number, userId: number): Promise<void> {
     let url = `${GetRestBaseUrl(siteUrl)}/web/siteGroups(${groupId})/users/removeById(${userId})`;
-    await GetJson(url, null, { method: "POST", allowCache: false, jsonMetadata: jsonTypes.nometadata });
+    await GetJson(url, null, {
+        method: "POST", allowCache: false, jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
 }
 
 export async function SetGroupOwner(siteUrl: string, groupId: number, ownerId: number, ownerIsAGroup?: boolean) {
@@ -454,7 +510,10 @@ export async function SetGroupOwner(siteUrl: string, groupId: number, ownerId: n
     if (ownerIsAGroup !== true) {
         let url = `${GetRestBaseUrl(siteUrl)}/web/siteGroups/getById('${groupId}')/SetUserAsOwner(${ownerId})`;
         try {
-            await GetJson<{ 'odata.null': true }>(url, null, { jsonMetadata: jsonTypes.nometadata, method: "POST" });
+            await GetJson<{ 'odata.null': true }>(url, null, {
+                jsonMetadata: jsonTypes.nometadata, method: "POST",
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+            });
             return true;
         } catch (e) {
             logger.error(`SetGroupOwner ${groupId} ${ownerId} error:`);
@@ -481,7 +540,8 @@ export async function SetGroupOwner(siteUrl: string, groupId: number, ownerId: n
                 headers: {
                     Accept: jsonTypes.standard,
                     "content-type": contentTypes.xml
-                }
+                },
+                spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
             });
             //logger.json(serviceJSONResponse, "soap result");
             return isNullOrEmptyArray(serviceJSONResponse) || isNullOrEmptyString(serviceJSONResponse[0].ErrorInfo);
@@ -511,7 +571,10 @@ export async function GroupIncludesAllUsers(siteUrl: string, groupId: number) {
 export async function GetCurrentUserADGroupMemberships(siteUrl: string) {
     let url = `${GetRestBaseUrl(siteUrl)}/SP.Publishing.SitePageService.GetCurrentUserMemberships`;
     try {
-        let result = await GetJson<{ value: string[] }>(url, null, { jsonMetadata: jsonTypes.nometadata });
+        let result = await GetJson<{ value: string[] }>(url, null, {
+            jsonMetadata: jsonTypes.nometadata,
+            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        });
         return isNotEmptyArray(result.value) ? result.value.map(id => normalizeGuid(id)) : [];
     } catch (e) {
         logger.error(e);

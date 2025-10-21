@@ -37,7 +37,8 @@ export async function GetItemsById<T extends IRestItem>(siteUrl: string, listIdO
                     //it is cached in _restListItems anyways so this is not needed.
                     allowCache: allowCache === true,
                     includeDigestInGet: true,
-                    jsonMetadata: options && options.jsonMetadata
+                    jsonMetadata: options && options.jsonMetadata,
+                    spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
                 }).then(obj => {
                     if (!isNullOrUndefined(obj)) {
                         //no-metadata will return a value, as a single result or array
@@ -99,7 +100,8 @@ export function GetItemsByIdSync<T extends IRestItem>(siteUrl: string, listIdOrT
                     //it is cached in _restListItems anyways so this is not needed.
                     allowCache: allowCache === true,
                     includeDigestInGet: true,
-                    jsonMetadata: options && options.jsonMetadata
+                    jsonMetadata: options && options.jsonMetadata,
+                    spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
                 });
 
                 if (response && response.success && response.result) {
