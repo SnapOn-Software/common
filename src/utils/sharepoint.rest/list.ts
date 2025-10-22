@@ -1117,31 +1117,32 @@ function _GetListItemsInfo(siteUrl: string, listIdOrTitle: string, options: {
     let columns: string[] = [];
     let expand: string[] = [];
     let expandedLookupFields: IFieldInfoEX[] = [];
-    options.columns?.forEach(c => {
-        if (isString(c)) columns.push(c);
-        else {
-            let internalName = c.InternalName;
-            //Issue 828, 336
-            if (internalName.startsWith("_")) internalName = `OData_${internalName}`;
+    if (isNotEmptyArray(options.columns))
+        options.columns.forEach(c => {
+            if (isString(c)) columns.push(c);
+            else {
+                let internalName = c.InternalName;
+                //Issue 828, 336
+                if (internalName.startsWith("_")) internalName = `OData_${internalName}`;
 
-            let isLookupField = c.TypeAsString === "Lookup" || c.TypeAsString === "LookupMulti";
-            let isUserField = c.TypeAsString === "User" || c.TypeAsString === "UserMulti";
+                let isLookupField = c.TypeAsString === "Lookup" || c.TypeAsString === "LookupMulti";
+                let isUserField = c.TypeAsString === "User" || c.TypeAsString === "UserMulti";
 
-            if (isLookupField || isUserField) {
-                //ISSUE: 1519 - Added lookupField property to able to retrieve value of the additional lookup field key
-                let lookupField = (c as IFieldLookupInfo).LookupField;
-                if (!isNullOrEmptyString(lookupField) && isLookupField) {
-                    columns.push(`${internalName}/${lookupField}`);
+                if (isLookupField || isUserField) {
+                    //ISSUE: 1519 - Added lookupField property to able to retrieve value of the additional lookup field key
+                    let lookupField = (c as IFieldLookupInfo).LookupField;
+                    if (!isNullOrEmptyString(lookupField) && isLookupField) {
+                        columns.push(`${internalName}/${lookupField}`);
+                    }
+                    //we want to expand it
+                    columns.push(`${internalName}/Title`);
+                    columns.push(`${internalName}/Id`);
+                    expand.push(internalName);
+                    expandedLookupFields.push(c);
                 }
-                //we want to expand it
-                columns.push(`${internalName}/Title`);
-                columns.push(`${internalName}/Id`);
-                expand.push(internalName);
-                expandedLookupFields.push(c);
+                else columns.push(internalName);
             }
-            else columns.push(internalName);
-        }
-    });
+        });
     if (isNotEmptyArray(options.expand)) {
         expand.push(...options.expand);
     }

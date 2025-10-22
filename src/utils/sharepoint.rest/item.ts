@@ -154,6 +154,8 @@ export async function GetListItemFieldValues(siteUrl: string, listIdOrTitle: str
 
 /** version #.# or version ID as number */
 export async function GetListItem(siteUrl: string, listIdOrTitle: string, itemId: number | string, version?: string | number, options?: { refreshCache?: boolean; }): Promise<IRestItem> {
+    if (!options)
+        options = {};
     siteUrl = GetSiteUrl(siteUrl);
 
     let versionPart = "";
@@ -163,7 +165,7 @@ export async function GetListItem(siteUrl: string, listIdOrTitle: string, itemId
 
     let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})${versionPart}`;
     let result = await GetJson<IRestItem>(url, null, {
-        allowCache: options?.refreshCache !== true,
+        allowCache: options.refreshCache !== true,
         jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
