@@ -9,6 +9,7 @@ import { FileLevel, IFileInfoWithModerationStatus, ModerationStatus } from "../.
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache } from "../rest";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
+import { SPVersionToVersionId } from "./exports-index";
 import { GetListRestUrl } from "./list";
 
 const logger = ConsoleLogger.get("utils/sharepoint.rest/file.folder");
@@ -302,7 +303,7 @@ export async function GetFileEx<T>(siteUrl: string, fileServerRelativeUrl: strin
         // } catch (e) {
         //     return { Exists: false };
         // }
-        versionPart = `/versions(${FileVersionToVersionId(options.version)})/`;
+        versionPart = `/versions(${SPVersionToVersionId(options.version)})/`;
     }
 
     let fileRestUrl = GetFileRestUrl(siteUrl, fileServerRelativeUrl);
@@ -368,18 +369,9 @@ export async function GetFileVersionHistory(siteUrl: string, fileServerRelativeU
     }
 }
 
-/** version: 1.5 >> version ID for history */
+/** @deprecated use SPVersionToVersionId instead -- version: 1.5 >> version ID for history */
 export function FileVersionToVersionId(version: string | number) {
-    try {
-        if (isNumber(version)) return version;
-        const vSplit = version.split('.');
-        const major = parseInt(vSplit[0], 10);
-        const minor = parseInt(vSplit[1], 10);
-        let versionId = (major * 512) + minor;
-        return versionId;
-    }
-    catch (e) { }
-    return null;
+    return SPVersionToVersionId(version);
 }
 
 var $reloadCacheFileModifiedRecentlyFlagged: string[] = [];

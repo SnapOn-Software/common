@@ -983,7 +983,7 @@ export async function GetListItems(siteUrl: string, listIdOrTitle: string, optio
     /** Optional, default: 1000. 0: get all items. */
     rowLimit?: number;
     /** Id, Title, Modified, FileLeafRef, FileDirRef, FileRef, FileSystemObjectType */
-    columns: (string | IFieldInfoEX)[];
+    columns?: (string | IFieldInfoEX)[];
     foldersBehaviour?: GeListItemsFoldersBehaviour;
     /** Optional, request to expand some columns. */
     expand?: string[];
@@ -1043,7 +1043,7 @@ export function GetListItemsSync(siteUrl: string, listIdOrTitle: string, options
     /** Optional, default: 1000. 0: get all items. */
     rowLimit?: number;
     /** Id, Title, Modified, FileLeafRef, FileDirRef, FileRef, FileSystemObjectType */
-    columns: (string | IFieldInfoEX)[];
+    columns?: (string | IFieldInfoEX)[];
     foldersBehaviour?: GeListItemsFoldersBehaviour;
     /** Optional, request to expand some columns. */
     expand?: string[];
@@ -1100,7 +1100,7 @@ function _GetListItemsInfo(siteUrl: string, listIdOrTitle: string, options: {
     /** Optional, default: 1000. 0: get all items. */
     rowLimit?: number;
     /** Id, Title, Modified, FileLeafRef, FileDirRef, FileRef, FileSystemObjectType */
-    columns: (string | IFieldInfoEX)[];
+    columns?: (string | IFieldInfoEX)[];
     /** Optional, request to expand some columns. */
     expand?: string[];
     /** allow to change the jsonMetadata for this request, default: verbose */
@@ -1117,7 +1117,7 @@ function _GetListItemsInfo(siteUrl: string, listIdOrTitle: string, options: {
     let columns: string[] = [];
     let expand: string[] = [];
     let expandedLookupFields: IFieldInfoEX[] = [];
-    options.columns.forEach(c => {
+    options.columns?.forEach(c => {
         if (isString(c)) columns.push(c);
         else {
             let internalName = c.InternalName;
@@ -1151,7 +1151,8 @@ function _GetListItemsInfo(siteUrl: string, listIdOrTitle: string, options: {
     PushNoDuplicate(columns, "FileRef");
     PushNoDuplicate(columns, "FileSystemObjectType");
 
-    queryParams.push(`$select=${encodeURIComponent(makeUniqueArray(columns).join(','))}`);
+    if (!isNullOrUndefined(options.columns))//if got null run without a $select, useful when we need many columns and query string is too long
+        queryParams.push(`$select=${encodeURIComponent(makeUniqueArray(columns).join(','))}`);
 
     if (isNotEmptyArray(expand))
         queryParams.push(`$expand=${encodeURIComponent(makeUniqueArray(expand).join(','))}`);

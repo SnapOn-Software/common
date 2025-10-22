@@ -205,3 +205,21 @@ export var SkipFields: string[] = [
     "streamhash",
     "combine",
     "repairdocument"];
+
+
+/** 
+ * version #.# or version ID as number
+ * version: 1.5 >> version ID for history
+ * */
+export function SPVersionToVersionId(version: string | number) {
+    try {
+        if (isNumber(version)) return version;
+        const vSplit = version.split('.');
+        const major = parseInt(vSplit[0], 10);
+        const minor = parseInt(vSplit[1], 10);
+        let versionId = (major * 512) + minor;
+        return versionId;
+    }
+    catch (e) { }
+    return null;
+}

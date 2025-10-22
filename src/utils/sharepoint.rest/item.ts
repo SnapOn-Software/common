@@ -1,7 +1,7 @@
 import { chunkArray } from "../../helpers/collections.base";
 import { hasOwnProperty } from "../../helpers/objects";
 import { promiseNParallel } from "../../helpers/promises";
-import { isBoolean, isDate, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrUndefined, isNumber, isObject, isString } from "../../helpers/typecheckers";
+import { isBoolean, isDate, isNotEmptyArray, isNotEmptyString, isNullOrEmptyArray, isNullOrEmptyString, isNullOrUndefined, isNumber, isObject, isString } from "../../helpers/typecheckers";
 import { encodeURIComponentEX } from "../../helpers/url";
 import { IDictionary } from "../../types/common.types";
 import { jsonTypes } from "../../types/rest.types";
@@ -10,7 +10,8 @@ import { IRestItem } from "../../types/sharepoint.utils.types";
 import { LocaleKnownScript } from "../../utils/knownscript";
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, shortLocalCache } from "../rest";
-import { GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate, hasGlobalContext } from "./common";
+import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate, hasGlobalContext } from "./common";
+import { SPVersionToVersionId } from "./exports-index";
 import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./list";
 import { GetUser, GetUserSync } from "./user";
 
@@ -150,6 +151,49 @@ export async function GetListItemFieldValues(siteUrl: string, listIdOrTitle: str
 
     return values;
 }
+
+/** version #.# or version ID as number */
+export async function GetListItem(siteUrl: string, listIdOrTitle: string, itemId: number | string, version?: string | number, options?: { refreshCache?: boolean; }): Promise<IRestItem> {
+    siteUrl = GetSiteUrl(siteUrl);
+
+    let versionPart = "";
+    if (isNumber(version) && version > 0 || isNotEmptyString(version)) {
+        versionPart = `/versions(${SPVersionToVersionId(version)})`;
+    }
+
+    let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/items(${itemId})${versionPart}`;
+    let result = await GetJson<IRestItem>(url, null, {
+        allowCache: options?.refreshCache !== true,
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
+
+    if (isNotEmptyString(versionPart))//versions come back as values as text, need to clean them up for consistency
+    {
+        Object.keys(result).forEach(internalNameAsText => {
+            let internalName = DecodeFieldValuesAsTextKey(internalNameAsText);
+            let value = result[internalNameAsText];
+            if (!isNullOrUndefined(value)) {
+                if (isString(value.StringValue))
+                    value = value.StringValue;//ContentTypeId
+                else if (isNumber(value.LookupId)) {
+                    internalName = `${internalName}Id`;
+                    value = value.LookupId;
+                }
+                else if (Array.isArray(value)) {
+                    if (isNumber(value[0].LookupId)) {
+                        internalName = `${internalName}Id`;
+                        value = value.map(v => v.LookupId);
+                    }
+                }
+            }
+            result[internalName] = value;
+        });
+    }
+
+    return result;
+}
+
 
 /** Returns version array, newest version first. Can get moderator comments, cannot get file check in comments */
 export async function GetListItemFieldValuesHistory(siteUrl: string, listIdOrTitle: string, itemId: number | string, fields: string[], options?: { refreshCache?: boolean; }) {
