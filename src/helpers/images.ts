@@ -3,6 +3,9 @@ import { kwiz_cdn_hostname_production } from "./constants";
 //don't use kwiz_cdn_root since this might be saved in settings
 const prefix = `https://${kwiz_cdn_hostname_production}/products/common/images/`;
 
+export const LOGO_ANIM_LIGHT = `${prefix}logo/anim-light.gif`;
+export const LOGO_ANIM_DARK = `${prefix}logo/anim-dark.gif`;
+
 export const LOGO_ANIM_SMALL = `${prefix}logo/anim-small.gif`;
 export const LOGO_ANIM = `${prefix}logo/anim.gif`;
 
