@@ -62,3 +62,13 @@ export function validateAndSetFilename(fileNameWithExtension: string) {
     }
     return fileNameWithExtension;
 }
+
+export function getFileExtension(fileName: string, options?: {
+    /** send to to return "" when fileName does not have an extension, otherwise it returns the fileName  */
+    emptyIfMissing?: boolean;
+}) {
+    const lastDot = fileName.lastIndexOf('.');
+    if (lastDot >= 0) return fileName.slice(lastDot + 1).toLowerCase();
+    //no dot ? return empty, or fileName?
+    return options?.emptyIfMissing ? "" : fileName;
+}
