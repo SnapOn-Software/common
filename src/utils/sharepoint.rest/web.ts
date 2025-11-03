@@ -1021,27 +1021,26 @@ export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Dat
     let regionalSettings = await GetServerTimeZone(siteUrl);
     let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
-    if (!isNullOrEmptyString(timeZone)) {
+    if (!isNullOrEmptyString(timeZone) && typeof window !== "undefined" && _canUseJSLibraries(date)) {
         try {
             let momentTimezone = await MomentTimezoneJSKnownScript.load();
             let result = _momentUTCToLocalISO(date, timeZone, momentTimezone);
             if (!isNullOrEmptyString(result)) {
-                logger.debug(`UTCToSPServerLocalTime -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                logger.debug(`UTCToSPServerLocalTime -> moment.js -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
                 return result;
             }
         } catch {
         }
 
-        if (_canUseIntlDateTimeFormat(date)) {
-            let supportedFormattingLocale = _getSupportedFormattingLocaleForUTCToSPServerTime();
-            if (!isNullOrEmptyString(supportedFormattingLocale)) {
-                try {
-                    let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedFormattingLocale);
-                    if (!isNullOrEmptyString(result)) {
-                        return result;
-                    }
-                } catch {
+        let supportedFormattingLocale = _getSupportedFormattingLocaleForUTCToSPServerTime();
+        if (!isNullOrEmptyString(supportedFormattingLocale)) {
+            try {
+                let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedFormattingLocale);
+                if (!isNullOrEmptyString(result)) {
+                    logger.debug(`UTCToSPServerLocalTime -> Intl.DateTimeFormat -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                    return result;
                 }
+            } catch {
             }
         }
     }
@@ -1051,7 +1050,12 @@ export async function UTCToSPServerLocalTime(siteUrl: string, date: string | Dat
         ...longLocalCache, jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
-    return result && result.value || null;
+
+    if (result && result.value) {
+        logger.debug(`UTCToSPServerLocalTime -> utcToLocalTime -> date: ${date}, result: ${result.value}, timeZone: ${timeZone}`);
+        return result.value
+    }
+    return null;
 }
 
 /** get utc date yyyy-MM-ddTHH:mm:ssZ
@@ -1068,23 +1072,24 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
     let regionalSettings = GetServerTimeZoneSync(siteUrl);
     let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
-    if (!isNullOrEmptyString(timeZone) && typeof window !== "undefined") {
+    if (!isNullOrEmptyString(timeZone) && typeof window !== "undefined" && _canUseJSLibraries(date)) {
         try {
             let momentTimezone = MomentTimezoneJSKnownScript.loadSync();
             let result = _momentUTCToLocalISO(date, timeZone, momentTimezone);
             if (!isNullOrEmptyString(result)) {
-                logger.debug(`UTCToSPServerLocalTimeSync -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
+                logger.debug(`UTCToSPServerLocalTimeSync -> moment.js -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
                 return result;
             }
         } catch {
         }
 
-        if (_canUseIntlDateTimeFormat(date)) {
+        if (_canUseJSLibraries(date)) {
             let supportedFormattingLocale = _getSupportedFormattingLocaleForUTCToSPServerTime();
             if (!isNullOrEmptyString(supportedFormattingLocale)) {
                 try {
                     let result = _UTCDateStringToSPServerLocalDateString(date, timeZone, supportedFormattingLocale);
                     if (!isNullOrEmptyString(result)) {
+                        logger.debug(`UTCToSPServerLocalTimeSync -> Intl.DateTimeFormat -> date: ${date}, result: ${result}, timeZone: ${timeZone}`);
                         return result;
                     }
                 } catch {
@@ -1098,7 +1103,12 @@ export function UTCToSPServerLocalTimeSync(siteUrl: string, date: string | Date)
         ...longLocalCache, jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
-    return result.success && result.result.value || null;
+
+    if (result.success && result.result.value) {
+        logger.debug(`UTCToSPServerLocalTimeSync -> utcToLocalTime -> date: ${date}, result: ${result.result.value}, timeZone: ${timeZone}`);
+        return result.success && result.result.value
+    }
+    return null;
 }
 
 function _momentUTCToLocalISO(date: string, timeZone: string, momentTimezone: typeMonentJSTimeZone) {
@@ -1139,10 +1149,10 @@ function _momentLocalISOToUTC(date: string, timeZone: string, momentTimezone: ty
     return null;
 }
 
-function _canUseIntlDateTimeFormat(ISOdate: string) {
-    // Intl.DateTimeFormat has an issue with older dates
-    // https://stackoverflow.com/questions/43454520/timezone-issue-with-intl-datetimeformat-for-old-dates
-    return new Date(ISOdate).getFullYear() > 1975;
+function _canUseJSLibraries(ISOdate: string) {
+    // Intl.DateTimeFormat and moment have issues with older dates and don't match the SharePoint rest values.
+    // https://stackoverflow.com/questions/43454520/timezone-issue-with-intl-datetimeformat-for-old-dates     
+    return new Date(ISOdate).getFullYear() >= 2000;
 }
 
 function _getSupportedFormattingLocaleForUTCToSPServerTime() {
