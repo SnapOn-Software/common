@@ -4,9 +4,12 @@ import { isSPPageContextInfoReady, isSPPageContextInfoReadySync } from "../../he
 import { isNullOrEmptyString, isNullOrUndefined, isNumber, isTypeofFullNameNullOrUndefined } from "../../helpers/typecheckers";
 import { SPFxAuthToken, SPFxAuthTokenType } from "../../types/auth";
 import { IRestOptions } from "../../types/rest.types";
+import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { GetJson, GetJsonSync } from "../rest";
 import { GetRestBaseUrl, hasGlobalContext } from "../sharepoint.rest/common";
+
+const logger = ConsoleLogger.get("utils/auth/common");
 
 export function GetTokenAudiencePrefix(appId: string) {
     return `api://${appId}`;
@@ -144,6 +147,10 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
         return null;
     }
 
+    if (_spPageContextInfo.isAnonymousGuestUser === true || _spPageContextInfo["isEmailAuthenticationGuestUser"] === true) {
+        return null;
+    }
+
     let cachedToken = _getSPFxClientAuthTokenFromCache(spfxTokenType);
     if (!isNullOrEmptyString(cachedToken)) {
         return cachedToken;
@@ -176,7 +183,8 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
                     token_type: "Bearer"
                 }, spfxTokenType);
             }
-        } catch {
+        } catch (ex) {
+            logger.error(ex);
         }
 
         try {
@@ -260,6 +268,7 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
                         let iframe = document.createElement("iframe") as HTMLIFrameElement;
                         iframe.style.display = "none";
                         iframe.src = url;
+                        iframe.sandbox = "allow-forms allow-scripts"
                         iframe.onload = () => {
                             window.setTimeout(() => {
                                 let params = new URLSearchParams(iframe.contentWindow.location.hash.replace("#", "?"));
@@ -306,7 +315,8 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
                     return _parseAndCacheGetSPFxClientAuthTokenResult(authToken, spfxTokenType);
                 }
             }
-        } catch {
+        } catch (ex) {
+            logger.error(ex);
         }
     } else {
         try {
@@ -325,6 +335,11 @@ export function GetSPFxClientAuthTokenSync(siteUrl: string, spfxTokenType: SPFxA
     isSPPageContextInfoReadySync();
 
     if (isTypeofFullNameNullOrUndefined("_spPageContextInfo") || _spPageContextInfo.isSPO !== true || _spPageContextInfo.isAppWeb === true) {
+        return null;
+    }
+
+    
+    if (_spPageContextInfo.isAnonymousGuestUser === true || _spPageContextInfo["isEmailAuthenticationGuestUser"] === true) {
         return null;
     }
 
