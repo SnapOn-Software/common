@@ -5,7 +5,7 @@ export const kwiz_cdn_hostname_production = "apps.kwizcom.com";
 /** kwizappsfr.azurewebsites.net */
 export const kwiz_cdn_hostname_fastring = "kwizappsfr.azurewebsites.net";
 /** localhost:4433 */
-export const kwiz_cdn_hostname_localdev = "localhost:4433";
+export const kwiz_cdn_hostname_localdev = "apps.kwizcom.com";
 
 
 /** https://apps.kwizcom.com (or local dev/fast-ring) - runtime use only, don't use in places where this might get saved in settings */
