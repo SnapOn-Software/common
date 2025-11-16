@@ -1,8 +1,10 @@
 import { firstOrNull } from "../../helpers/collections.base";
+import { promiseLock } from "../../helpers/promises";
 import { getUniqueId } from "../../helpers/random";
 import { isSPPageContextInfoReady, isSPPageContextInfoReadySync } from "../../helpers/sharepoint";
-import { isNullOrEmptyString, isNullOrUndefined, isNumber, isTypeofFullNameNullOrUndefined } from "../../helpers/typecheckers";
-import { SPFxAuthToken, SPFxAuthTokenType } from "../../types/auth";
+import { isNullOrEmptyString, isNullOrUndefined, isNumber, isNumeric, isTypeofFullNameNullOrUndefined } from "../../helpers/typecheckers";
+import { makeFullUrl } from "../../helpers/url";
+import { ISPFxOAuthToken, SPFxAuthTokenType } from "../../types/auth";
 import { IRestOptions } from "../../types/rest.types";
 import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
@@ -32,7 +34,6 @@ export function GetMSALAdminConsentUrl(params: {
     return url;
 }
 
-
 function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     let acquireURL = `${GetRestBaseUrl(siteUrl)}/SP.OAuth.Token/Acquire`;
     //todo: add all the resource end points (ie. OneNote, Yammer, Stream)
@@ -45,7 +46,8 @@ function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAu
         case SPFxAuthTokenType.SharePoint:
         case SPFxAuthTokenType.MySite:
             isSPOToken = true;
-            resource = new URL(acquireURL).origin;
+            let absUrl = makeFullUrl(acquireURL);
+            resource = new URL(absUrl).origin;
             if (spfxTokenType === SPFxAuthTokenType.MySite) {
                 let split = resource.split(".");
                 split[0] += "-my";
@@ -69,9 +71,10 @@ function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAu
         url: acquireURL,
         body: JSON.stringify(data),
         options: {
-            allowCache: false,
-            // ...shortLocalCache,
-            // postCacheKey: `${spfxTokenType}_${_spPageContextInfo.webId}`,
+            allowCache: true,
+            localStorageExpiration: {
+                minutes: 1
+            },
             includeDigestInPost: true,
             headers: {
                 "Accept": "application/json;odata.metadata=minimal",
@@ -84,15 +87,19 @@ function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAu
     return params;
 }
 
-function _parseAndCacheGetSPFxClientAuthTokenResult(result: SPFxAuthToken, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
+function _parseAndCacheGetSPFxClientAuthTokenResult(result: ISPFxOAuthToken, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     if (hasGlobalContext() && !isNullOrUndefined(result) && !isNullOrEmptyString(result.access_token)) {
-        let expiration = isNumber(result.expires_on) ?
-            new Date(result.expires_on * 1000) :
-            {
-                minutes: 15
-            };
+        let expiration = new Date();
 
-        setCacheItem(`access_token_${spfxTokenType}`, result.access_token, expiration);
+        if (isNumeric(result.expires_on)) {
+            expiration = new Date(parseInt(result.expires_on.toString()) * 1000);
+        } else if (isNumber(result.expires_in)) {
+            expiration.setSeconds(expiration.getSeconds() + result.expires_in);
+        } else {
+            expiration.setSeconds(expiration.getSeconds() + 60 * 30);
+        }
+
+        setCacheItem(`spfx_access_token_${spfxTokenType}`, result.access_token, expiration);
 
         return result.access_token;
     }
@@ -101,7 +108,7 @@ function _parseAndCacheGetSPFxClientAuthTokenResult(result: SPFxAuthToken, spfxT
 
 function _getSPFxClientAuthTokenFromCache(spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     if (hasGlobalContext()) {
-        let cachedToken = getCacheItem<string>(`access_token_${spfxTokenType}`);
+        let cachedToken = getCacheItem<string>(`spfx_access_token_${spfxTokenType}`);
         if (!isNullOrEmptyString(cachedToken)) {
             return cachedToken;
         }
@@ -112,6 +119,10 @@ function _getSPFxClientAuthTokenFromCache(spfxTokenType: SPFxAuthTokenType = SPF
 function _getSPFxClientAuthTokenFromMSALCache(resource: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     try {
         let cachedToken: {
+            /** Number of milliseconds that have elapsed since January 1, 1970, 00:00:00 UTC. Can be used to create a Date object directly.  
+             * For example,
+             * var d = new Date(1763258561000)
+            */
             expiration: number;
             value: string;
         };
@@ -124,10 +135,14 @@ function _getSPFxClientAuthTokenFromMSALCache(resource: string, spfxTokenType: S
             }
         }
 
-        if (!isNullOrUndefined(cachedToken)) {
+        if (!isNullOrUndefined(cachedToken)
+            && !isNullOrEmptyString(cachedToken.value)
+            && isNumber(cachedToken.expiration)
+            && cachedToken.expiration > new Date().getTime()) {
             return _parseAndCacheGetSPFxClientAuthTokenResult({
                 access_token: cachedToken.value,
-                expires_on: cachedToken.expiration.toString(),
+                // convert milliseconds to seconds
+                expires_on: Math.floor(new Date(cachedToken.expiration).getTime() / 1000),
                 resource: resource,
                 scope: null,
                 token_type: "Bearer"
@@ -143,11 +158,11 @@ function _getSPFxClientAuthTokenFromMSALCache(resource: string, spfxTokenType: S
 export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     await isSPPageContextInfoReady();
 
-    if (isTypeofFullNameNullOrUndefined("_spPageContextInfo") || _spPageContextInfo.isSPO !== true || _spPageContextInfo.isAppWeb === true) {
-        return null;
-    }
-
-    if (_spPageContextInfo.isAnonymousGuestUser === true || _spPageContextInfo["isEmailAuthenticationGuestUser"] === true) {
+    if (isTypeofFullNameNullOrUndefined("_spPageContextInfo")
+        || _spPageContextInfo.isSPO !== true
+        || _spPageContextInfo.isAppWeb === true
+        || _spPageContextInfo.isAnonymousGuestUser === true
+        || _spPageContextInfo["isEmailAuthenticationGuestUser"] === true) {
         return null;
     }
 
@@ -156,190 +171,195 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
         return cachedToken;
     }
 
-    if (spfxTokenType === SPFxAuthTokenType.Graph) {
-        let resource = "https://graph.microsoft.com";
+    let key = `GetSPFxClientAuthToken_${_spPageContextInfo.userLoginName}_${_spPageContextInfo.siteId}_${spfxTokenType}`;
+    return await promiseLock(key, async () => {
+        if (spfxTokenType === SPFxAuthTokenType.Graph) {
+            let resource = "https://graph.microsoft.com";
 
-        let token = _getSPFxClientAuthTokenFromMSALCache(resource, spfxTokenType);
-        if (!isNullOrEmptyString(token)) {
-            return token;
-        }
-
-        try {
-            let _spComponentLoader = window["_spComponentLoader"]
-            let manifests: { alias: string; id: string }[] = _spComponentLoader.getManifests();
-            let manifest = firstOrNull(manifests, (manifest) => {
-                return manifest.alias === "@microsoft/sp-http-base";
-            });
-            let module = await _spComponentLoader.loadComponentById(manifest.id)
-            let factory = new module.AadTokenProviderFactory();
-            let provider = await factory.getTokenProvider();
-            let token = await provider.getToken(resource, true);
+            let token = _getSPFxClientAuthTokenFromMSALCache(resource, spfxTokenType);
             if (!isNullOrEmptyString(token)) {
-                return _parseAndCacheGetSPFxClientAuthTokenResult({
-                    access_token: token,
-                    expires_on: null,
-                    resource: resource,
-                    scope: null,
-                    token_type: "Bearer"
-                }, spfxTokenType);
-            }
-        } catch (ex) {
-            logger.error(ex);
-        }
-
-        try {
-            let bufferToString = (buffer: Uint16Array | Uint32Array | Uint8Array) => {
-                let result = Array.from(buffer, (c) => { return String.fromCodePoint(c) }).join("");
-                return window.btoa(result);
-            };
-
-            let ni = new Uint32Array(1);
-            let ci = () => {
-                let b = window.crypto.getRandomValues(ni);
-                return b[0];
-            };
-            let generateNonce = () => {
-                let ti = "0123456789abcdef";
-                const e = Date.now()
-                    , t = 1024 * ci() + (1023 & ci())
-                    , n = new Uint8Array(16)
-                    , a = Math.trunc(t / 2 ** 30)
-                    , i = t & 2 ** 30 - 1
-                    , r = ci();
-                n[0] = e / 2 ** 40,
-                    n[1] = e / 2 ** 32,
-                    n[2] = e / 2 ** 24,
-                    n[3] = e / 65536,
-                    n[4] = e / 256,
-                    n[5] = e,
-                    n[6] = 112 | a >>> 8,
-                    n[7] = a,
-                    n[8] = 128 | i >>> 24,
-                    n[9] = i >>> 16,
-                    n[10] = i >>> 8,
-                    n[11] = i,
-                    n[12] = r >>> 24,
-                    n[13] = r >>> 16,
-                    n[14] = r >>> 8,
-                    n[15] = r;
-                let o = "";
-                for (let e = 0; e < n.length; e++)
-                    o += ti.charAt(n[e] >>> 4),
-                        o += ti.charAt(15 & n[e]),
-                        3 !== e && 5 !== e && 7 !== e && 9 !== e || (o += "-");
-                return o
+                return token;
             }
 
-            let requestId = getUniqueId();
-
-            let stateBuffer = new TextEncoder().encode(JSON.stringify({
-                id: getUniqueId(),
-                meta: {
-                    interactionType: "silent"
+            try {
+                let _spComponentLoader = window["_spComponentLoader"]
+                let manifests: { alias: string; id: string }[] = _spComponentLoader.getManifests();
+                let manifest = firstOrNull(manifests, (manifest) => {
+                    return manifest.alias === "@microsoft/sp-http-base";
+                });
+                let module = await _spComponentLoader.loadComponentById(manifest.id)
+                let factory = new module.AadTokenProviderFactory();
+                let provider = await factory.getTokenProvider();
+                let token = await provider.getToken(resource, true);
+                if (!isNullOrEmptyString(token)) {
+                    return _parseAndCacheGetSPFxClientAuthTokenResult({
+                        access_token: token,
+                        expires_on: null,
+                        resource: resource,
+                        scope: null,
+                        token_type: "Bearer"
+                    }, spfxTokenType);
                 }
-            }));
-            let state = bufferToString(stateBuffer);
+            } catch (ex) {
+                logger.error(ex);
+            }
 
-            let redirectUri = `https://${window.location.host}/_forms/spfxsinglesignon.aspx`;
-            let sid = _spPageContextInfo["aadSessionId"];
+            try {
+                let bufferToString = (buffer: Uint16Array | Uint32Array | Uint8Array) => {
+                    let result = Array.from(buffer, (c) => { return String.fromCodePoint(c) }).join("");
+                    return window.btoa(result);
+                };
 
-            let codeVerifierBuffer = window.crypto.getRandomValues(new Uint8Array(32));
-            let codeVerifier = bufferToString(codeVerifierBuffer).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+                let ni = new Uint32Array(1);
+                let ci = () => {
+                    let b = window.crypto.getRandomValues(ni);
+                    return b[0];
+                };
+                let generateNonce = () => {
+                    let ti = "0123456789abcdef";
+                    const e = Date.now()
+                        , t = 1024 * ci() + (1023 & ci())
+                        , n = new Uint8Array(16)
+                        , a = Math.trunc(t / 2 ** 30)
+                        , i = t & 2 ** 30 - 1
+                        , r = ci();
+                    n[0] = e / 2 ** 40,
+                        n[1] = e / 2 ** 32,
+                        n[2] = e / 2 ** 24,
+                        n[3] = e / 65536,
+                        n[4] = e / 256,
+                        n[5] = e,
+                        n[6] = 112 | a >>> 8,
+                        n[7] = a,
+                        n[8] = 128 | i >>> 24,
+                        n[9] = i >>> 16,
+                        n[10] = i >>> 8,
+                        n[11] = i,
+                        n[12] = r >>> 24,
+                        n[13] = r >>> 16,
+                        n[14] = r >>> 8,
+                        n[15] = r;
+                    let o = "";
+                    for (let e = 0; e < n.length; e++)
+                        o += ti.charAt(n[e] >>> 4),
+                            o += ti.charAt(15 & n[e]),
+                            3 !== e && 5 !== e && 7 !== e && 9 !== e || (o += "-");
+                    return o
+                }
 
-            let codeChallengeBuffer = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier))
-            let codeChallenge = bufferToString(new Uint8Array(codeChallengeBuffer)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+                let requestId = getUniqueId();
 
-            let nonce = generateNonce();
-
-            let url = `${_spPageContextInfo["aadInstanceUrl"]}/${_spPageContextInfo.aadTenantId}/oauth2/v2.0/authorize?`;
-            url += `client_id=08e18876-6177-487e-b8b5-cf950c1e598c`;
-            url += `&scope=${encodeURIComponent("https://graph.microsoft.com/.default openid profile offline_access")}`;
-            url += `&redirect_uri=${encodeURIComponent(redirectUri)}`;
-            url += `&client-request-id=${encodeURIComponent(requestId)}`;
-            url += `&response_mode=fragment`;
-            url += `&response_type=code`;
-            url += `&code_challenge=${codeChallenge}&code_challenge_method=S256&prompt=none`;
-            url += `&sid=${encodeURIComponent(sid)}&nonce=${nonce}`;
-            url += `&state=${encodeURIComponent(state)}`;
-
-            let getCodeFromIframe = async () => {
-                return new Promise<string>((resolve, reject) => {
-                    try {
-                        let iframe = document.createElement("iframe") as HTMLIFrameElement;
-                        iframe.style.display = "none";
-                        iframe.src = url;
-                        iframe.sandbox = "allow-forms allow-scripts"
-                        iframe.onload = () => {
-                            window.setTimeout(() => {
-                                let params = new URLSearchParams(iframe.contentWindow.location.hash.replace("#", "?"));
-                                let pCode = params.get("code");
-                                let pState = params.get("state");
-                                let pSid = params.get("session_state");
-                                if (!isNullOrEmptyString(pCode) && pState === state && pSid === sid) {
-                                    resolve(pCode);
-                                } else {
-                                    reject();
-                                }
-
-                                document.body.removeChild(iframe);
-                            }, 100)
-                        };
-
-                        document.body.appendChild(iframe);
-                    } catch {
-                        reject();
+                let stateBuffer = new TextEncoder().encode(JSON.stringify({
+                    id: getUniqueId(),
+                    meta: {
+                        interactionType: "silent"
                     }
-                });
-            };
+                }));
+                let state = bufferToString(stateBuffer);
 
-            let authCode = await getCodeFromIframe();
-            if (!isNullOrEmptyString(authCode)) {
-                let url = `${_spPageContextInfo["aadInstanceUrl"]}/${_spPageContextInfo.aadTenantId}/oauth2/v2.0/token?`;
-                url += `client-request-id=${encodeURIComponent(requestId)}`;
+                let redirectUri = `https://${window.location.host}/_forms/spfxsinglesignon.aspx`;
+                let sid = _spPageContextInfo["aadSessionId"];
 
-                let fd = new FormData();
-                fd.append("client_id", "08e18876-6177-487e-b8b5-cf950c1e598c");
-                fd.append("scope", "https://graph.microsoft.com/.default openid profile offline_access");
-                fd.append("redirect_uri", redirectUri);
-                fd.append("code", authCode);
-                fd.append("grant_type", "authorization_code");
-                fd.append("code_verifier", codeVerifier);
+                let codeVerifierBuffer = window.crypto.getRandomValues(new Uint8Array(32));
+                let codeVerifier = bufferToString(codeVerifierBuffer).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 
-                let response = await fetch(url, {
-                    method: "POST",
-                    body: fd
-                });
+                let codeChallengeBuffer = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier))
+                let codeChallenge = bufferToString(new Uint8Array(codeChallengeBuffer)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 
-                if (response.ok) {
-                    let authToken = await response.json() as SPFxAuthToken;
-                    return _parseAndCacheGetSPFxClientAuthTokenResult(authToken, spfxTokenType);
+                let nonce = generateNonce();
+
+                let url = `${_spPageContextInfo["aadInstanceUrl"]}/${_spPageContextInfo.aadTenantId}/oauth2/v2.0/authorize?`;
+                url += `client_id=08e18876-6177-487e-b8b5-cf950c1e598c`;
+                url += `&scope=${encodeURIComponent("https://graph.microsoft.com/.default openid profile offline_access")}`;
+                url += `&redirect_uri=${encodeURIComponent(redirectUri)}`;
+                url += `&client-request-id=${encodeURIComponent(requestId)}`;
+                url += `&response_mode=fragment`;
+                url += `&response_type=code`;
+                url += `&code_challenge=${codeChallenge}&code_challenge_method=S256&prompt=none`;
+                url += `&sid=${encodeURIComponent(sid)}&nonce=${nonce}`;
+                url += `&state=${encodeURIComponent(state)}`;
+
+                let getCodeFromIframe = async () => {
+                    return new Promise<string>((resolve, reject) => {
+                        try {
+                            let iframe = document.createElement("iframe") as HTMLIFrameElement;
+                            iframe.style.visibility = "hidden";
+                            iframe.style.position = "absolute";
+                            iframe.style.width = iframe.style.height = "0";
+                            iframe.style.border = "0";
+                            iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
+                            iframe.src = url;
+                            iframe.onload = () => {
+                                window.setTimeout(() => {
+                                    let params = new URLSearchParams(iframe.contentWindow.location.hash.replace("#", "?"));
+                                    let pCode = params.get("code");
+                                    let pState = params.get("state");
+                                    let pSid = params.get("session_state");
+                                    if (!isNullOrEmptyString(pCode) && pState === state && pSid === sid) {
+                                        resolve(pCode);
+                                    } else {
+                                        reject();
+                                    }
+
+                                    document.body.removeChild(iframe);
+                                }, 100)
+                            };
+
+                            document.body.appendChild(iframe);
+                        } catch {
+                            reject();
+                        }
+                    });
+                };
+
+                let authCode = await getCodeFromIframe();
+                if (!isNullOrEmptyString(authCode)) {
+                    let url = `${_spPageContextInfo["aadInstanceUrl"]}/${_spPageContextInfo.aadTenantId}/oauth2/v2.0/token?`;
+                    url += `client-request-id=${encodeURIComponent(requestId)}`;
+
+                    let fd = new FormData();
+                    fd.append("client_id", "08e18876-6177-487e-b8b5-cf950c1e598c");
+                    fd.append("scope", "https://graph.microsoft.com/.default openid profile offline_access");
+                    fd.append("redirect_uri", redirectUri);
+                    fd.append("code", authCode);
+                    fd.append("grant_type", "authorization_code");
+                    fd.append("code_verifier", codeVerifier);
+
+                    let response = await fetch(url, {
+                        method: "POST",
+                        body: fd
+                    });
+
+                    if (response.ok) {
+                        let authToken = await response.json() as ISPFxOAuthToken;
+                        return _parseAndCacheGetSPFxClientAuthTokenResult(authToken, spfxTokenType);
+                    }
                 }
+            } catch (ex) {
+                logger.error(ex);
             }
-        } catch (ex) {
-            logger.error(ex);
+        } else {
+            try {
+                let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
+                let result = await GetJson<ISPFxOAuthToken>(url, body, options);
+                return _parseAndCacheGetSPFxClientAuthTokenResult(result, spfxTokenType);
+            } catch {
+            }
         }
-    } else {
-        try {
-            let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
-            let result = await GetJson<SPFxAuthToken>(url, body, options);
-            return _parseAndCacheGetSPFxClientAuthTokenResult(result, spfxTokenType);
-        } catch {
-        }
-    }
 
-    return null;
+        return null;
+    }, 6000);
 }
 
 /** Acquire an authorization token for a Outlook, Graph, or SharePoint the same way SPFx clients do */
 export function GetSPFxClientAuthTokenSync(siteUrl: string, spfxTokenType: SPFxAuthTokenType = SPFxAuthTokenType.Graph) {
     isSPPageContextInfoReadySync();
 
-    if (isTypeofFullNameNullOrUndefined("_spPageContextInfo") || _spPageContextInfo.isSPO !== true || _spPageContextInfo.isAppWeb === true) {
-        return null;
-    }
-
-    
-    if (_spPageContextInfo.isAnonymousGuestUser === true || _spPageContextInfo["isEmailAuthenticationGuestUser"] === true) {
+    if (isTypeofFullNameNullOrUndefined("_spPageContextInfo")
+        || _spPageContextInfo.isSPO !== true
+        || _spPageContextInfo.isAppWeb === true
+        || _spPageContextInfo.isAnonymousGuestUser === true
+        || _spPageContextInfo["isEmailAuthenticationGuestUser"] === true) {
         return null;
     }
 
@@ -361,7 +381,7 @@ export function GetSPFxClientAuthTokenSync(siteUrl: string, spfxTokenType: SPFxA
     } else {
         try {
             let { url, body, options } = _getGetSPFxClientAuthTokenParams(siteUrl, spfxTokenType);
-            let response = GetJsonSync<SPFxAuthToken>(url, body, options);
+            let response = GetJsonSync<ISPFxOAuthToken>(url, body, options);
             return _parseAndCacheGetSPFxClientAuthTokenResult(response.result, spfxTokenType);
         } catch {
         }
