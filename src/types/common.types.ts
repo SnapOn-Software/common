@@ -21,3 +21,6 @@ export interface iFileData {
     filename: string;
     base64: string;
 }
+
+/** allow using Omit on complex join types */
+export type DeepOmit<T, K extends keyof T> = T extends any ? Omit<T, K> : never;
