@@ -20,6 +20,7 @@ export * from './functions';
 export * from './http';
 export * from './images';
 export * from './json';
+export * from './location';
 export * from './md5';
 export * from './objects';
 export * from './promises';

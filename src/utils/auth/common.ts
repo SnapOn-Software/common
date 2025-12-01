@@ -10,6 +10,7 @@ import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { GetJson, GetJsonSync } from "../rest";
 import { GetRestBaseUrl, hasGlobalContext } from "../sharepoint.rest/common";
+import { AutoDiscoverTenantInfo, DiscoverTenantInfo } from "./discovery";
 
 const logger = ConsoleLogger.get("utils/auth/common");
 
@@ -21,6 +22,60 @@ export function GetDefaultScope(appId: string) {
 }
 export function GetMSALSiteScope(hostName: string) {
     return `https://${hostName}`;
+}
+
+function _getGraphUrlFromHost(loginHostOrsharePointHost: string) {
+    loginHostOrsharePointHost = loginHostOrsharePointHost.toLowerCase();
+
+    if (loginHostOrsharePointHost.endsWith('/')) {
+        return loginHostOrsharePointHost.slice(0, -1);
+    }
+
+    if (loginHostOrsharePointHost.endsWith(".us")) {
+        return "https://graph.microsoft.us";
+    } else if (loginHostOrsharePointHost.endsWith(".sharepoint.com") || loginHostOrsharePointHost.endsWith("login.microsoftonline.com")) {
+        return "https://graph.microsoft.com";
+    } else if (loginHostOrsharePointHost.endsWith(".de")) {
+        return "https://graph.microsoft.de";
+    } else if (loginHostOrsharePointHost.endsWith(".cn")) {
+        return "https://microsoftgraph.chinacloudapi.cn";
+    }
+
+    return null;
+}
+
+export function GetGraphEndpointUrl() {
+    let url = "";
+
+    if ("location" in globalThis && !isNullOrEmptyString(globalThis.location.host)) {
+        url = _getGraphUrlFromHost(globalThis.location.host);
+    }
+
+    if (isNullOrEmptyString(url) && hasGlobalContext() === true) {
+        if (!isNullOrEmptyString(_spPageContextInfo["msGraphEndpointUrl"])) {
+            url = _spPageContextInfo["msGraphEndpointUrl"];
+        }
+
+        if (isNullOrEmptyString(url) && !isNullOrEmptyString(_spPageContextInfo["aadInstanceUrl"])) {
+            url = _getGraphUrlFromHost(_spPageContextInfo["aadInstanceUrl"]);
+        }
+
+        if (isNullOrEmptyString(url) && !isNullOrEmptyString(_spPageContextInfo["aadTenantId"])) {
+            let tenantInfo = DiscoverTenantInfo(_spPageContextInfo["aadTenantId"], true);
+            if (!isNullOrUndefined(tenantInfo) && !isNullOrEmptyString(tenantInfo.msGraphHost)) {
+                url = `https://${tenantInfo.msGraphHost}`;
+            }
+        }
+    }
+
+    if (isNullOrEmptyString(url)) {
+        let tenantInfo = AutoDiscoverTenantInfo(true);
+        if (!isNullOrUndefined(tenantInfo) && !isNullOrEmptyString(tenantInfo.msGraphHost)) {
+            url = `https://${tenantInfo.msGraphHost}`;
+        }
+    }
+
+    return !isNullOrEmptyString(url) ? url : "https://graph.microsoft.com";
 }
 
 export function GetMSALAdminConsentUrl(params: {
@@ -55,7 +110,8 @@ function _getGetSPFxClientAuthTokenParams(siteUrl: string, spfxTokenType: SPFxAu
             }
             break;
         default:
-            resource = "https://graph.microsoft.com";
+            resource = GetGraphEndpointUrl();
+            break;
     }
 
     let data = {
@@ -174,9 +230,9 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
     let key = `GetSPFxClientAuthToken_${_spPageContextInfo.userLoginName}_${_spPageContextInfo.siteId}_${spfxTokenType}`;
     return await promiseLock(key, async () => {
         if (spfxTokenType === SPFxAuthTokenType.Graph) {
-            let resource = "https://graph.microsoft.com";
+            let graphResource = GetGraphEndpointUrl();
 
-            let token = _getSPFxClientAuthTokenFromMSALCache(resource, spfxTokenType);
+            let token = _getSPFxClientAuthTokenFromMSALCache(graphResource, spfxTokenType);
             if (!isNullOrEmptyString(token)) {
                 return token;
             }
@@ -190,12 +246,12 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
                 let module = await _spComponentLoader.loadComponentById(manifest.id)
                 let factory = new module.AadTokenProviderFactory();
                 let provider = await factory.getTokenProvider();
-                let token = await provider.getToken(resource, true);
+                let token = await provider.getToken(graphResource, true);
                 if (!isNullOrEmptyString(token)) {
                     return _parseAndCacheGetSPFxClientAuthTokenResult({
                         access_token: token,
                         expires_on: null,
-                        resource: resource,
+                        resource: graphResource,
                         scope: null,
                         token_type: "Bearer"
                     }, spfxTokenType);
@@ -270,7 +326,7 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
 
                 let url = `${_spPageContextInfo["aadInstanceUrl"]}/${_spPageContextInfo.aadTenantId}/oauth2/v2.0/authorize?`;
                 url += `client_id=08e18876-6177-487e-b8b5-cf950c1e598c`;
-                url += `&scope=${encodeURIComponent("https://graph.microsoft.com/.default openid profile offline_access")}`;
+                url += `&scope=${encodeURIComponent(`${graphResource}/.default openid profile offline_access`)}`;
                 url += `&redirect_uri=${encodeURIComponent(redirectUri)}`;
                 url += `&client-request-id=${encodeURIComponent(requestId)}`;
                 url += `&response_mode=fragment`;
@@ -319,7 +375,7 @@ export async function GetSPFxClientAuthToken(siteUrl: string, spfxTokenType: SPF
 
                     let fd = new FormData();
                     fd.append("client_id", "08e18876-6177-487e-b8b5-cf950c1e598c");
-                    fd.append("scope", "https://graph.microsoft.com/.default openid profile offline_access");
+                    fd.append("scope", `https://${graphResource}/.default openid profile offline_access`);
                     fd.append("redirect_uri", redirectUri);
                     fd.append("code", authCode);
                     fd.append("grant_type", "authorization_code");
@@ -369,7 +425,8 @@ export function GetSPFxClientAuthTokenSync(siteUrl: string, spfxTokenType: SPFxA
     }
 
     if (spfxTokenType === SPFxAuthTokenType.Graph) {
-        let resource = "https://graph.microsoft.com";
+        let resource = GetGraphEndpointUrl();
+
         let token = _getSPFxClientAuthTokenFromMSALCache(resource, spfxTokenType);
 
         if (!isNullOrEmptyString(token)) {

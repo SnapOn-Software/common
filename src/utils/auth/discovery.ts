@@ -27,8 +27,7 @@ function _getFriendlyName(hostName: string) {
         let lastHostPart = hostParts[hostParts.length - 1] === "us" || hostParts[hostParts.length - 1] === "de" ? hostParts[hostParts.length - 1] : "com";
         if (firstHostPart.endsWith("-admin")) firstHostPart = firstHostPart.substring(0, firstHostPart.length - 6);
         return `${firstHostPart}.onmicrosoft.${lastHostPart}`;
-    }
-    else {
+    } else {
         return hostName;//could be an exchange email domain, or bpos customer
     }
 }
@@ -42,7 +41,8 @@ function _processOpenidConfiguration(config: IOpenidConfiguration, friendlyName:
         environment: AzureEnvironment.Production,
         idOrName: null,
         authorityUrl: null,
-        valid: false
+        valid: false,
+        msGraphHost: null
     };
 
     let endpoint = config.token_endpoint;//https://xxxx/{tenant}/....
@@ -58,16 +58,24 @@ function _processOpenidConfiguration(config: IOpenidConfiguration, friendlyName:
 
     data.authorityUrl = `${GetAzureADLoginEndPoint(data.environment)}/${data.idOrName}`;
     data.valid = true;
+    data.msGraphHost = config.msgraph_host;
 
     return data;
 }
 
-export function DiscoverTenantInfo(hostName: string, sync?: false): Promise<ITenantInfo>
-export function DiscoverTenantInfo(hostName: string, sync: true): ITenantInfo
-export function DiscoverTenantInfo(hostName: string, sync?: boolean): ITenantInfo | Promise<ITenantInfo> {
-    hostName = hostName.toLowerCase();
+export function DiscoverTenantInfo(hostNameOrId: string, sync?: false): Promise<ITenantInfo>
+export function DiscoverTenantInfo(hostNameOrId: string, sync: true): ITenantInfo
+export function DiscoverTenantInfo(hostNameOrId: string, sync?: boolean): ITenantInfo | Promise<ITenantInfo> {
+    hostNameOrId = hostNameOrId.toLowerCase();
 
-    let friendlyName = _getFriendlyName(hostName);
+    let friendlyName = "";
+
+    if (isValidGuid(hostNameOrId)) {
+        friendlyName = hostNameOrId;
+    } else {
+        friendlyName = _getFriendlyName(hostNameOrId);
+    }
+
     let url = _getOpenIdConfigurationUrl(friendlyName);
 
     if (sync === true) {
@@ -81,7 +89,7 @@ export function DiscoverTenantInfo(hostName: string, sync?: boolean): ITenantInf
         }
         return null;
     } else {
-        return promiseOnce(`DiscoverTenantInfo|${hostName}`, async () => {
+        return promiseOnce(`DiscoverTenantInfo|${hostNameOrId}`, async () => {
             try {
                 let config = await GetJson<IOpenidConfiguration>(url);
                 let data = _processOpenidConfiguration(config, friendlyName);
@@ -119,6 +127,7 @@ export function GetEnvironmentFromACSEndPoint(ACSEndPoint: string): AzureEnviron
             return AzureEnvironment.Production;
     }
 }
+
 export function GetAzureADLoginEndPoint(environment: AzureEnvironment): string {
     switch (environment) {
         case AzureEnvironment.Germany: return "https://login.microsoftonline.de";
