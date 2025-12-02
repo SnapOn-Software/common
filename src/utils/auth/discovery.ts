@@ -115,7 +115,7 @@ export function AutoDiscoverTenantInfo(sync?: boolean): ITenantInfo | Promise<IT
 export function GetEnvironmentFromACSEndPoint(ACSEndPoint: string): AzureEnvironment {
     switch (ACSEndPoint) {
         case "microsoftonline.us":
-            return AzureEnvironment.USGovernment;
+            return AzureEnvironment.USGovernmentHigh;
         case "microsoftonline.de":
             return AzureEnvironment.Germany;
         case "accesscontrol.chinacloudapi.cn":
@@ -132,7 +132,7 @@ export function GetAzureADLoginEndPoint(environment: AzureEnvironment): string {
     switch (environment) {
         case AzureEnvironment.Germany: return "https://login.microsoftonline.de";
         case AzureEnvironment.China: return "https://login.chinacloudapi.cn";
-        case AzureEnvironment.USGovernment: return "https://login.microsoftonline.us";
+        case AzureEnvironment.USGovernmentHigh: return "https://login.microsoftonline.us";
         case AzureEnvironment.PPE: return "https://login.windows-ppe.net";
         case AzureEnvironment.Production:
         default:

@@ -12,7 +12,10 @@ export enum AzureEnvironment {
     PPE = 1,
     China = 2,
     Germany = 3,
-    USGovernment = 4
+    USGovernment = 4,
+    USGovernmentHigh = 5,
+    USGovernmentDoD = 6,
+    Custom = 100
 }
 /** AuthenticationModes enum values for projects that can't use enums (when isolatedModules is true)  
  * @deprecated use AzureEnvironment
@@ -23,6 +26,9 @@ export const $AzureEnvironment = {
     China: 2,
     Germany: 3,
     USGovernment: 4,
+    USGovernmentHigh : 5,
+    USGovernmentDoD : 6,
+    Custom : 100
 }
 
 // eslint-disable-next-line no-shadow
