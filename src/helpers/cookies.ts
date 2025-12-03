@@ -5,8 +5,7 @@ var _zeroDay = new Date(0);
 var _today = new Date();
 
 export function deleteCookie(cookieName: string, path?: string) {
-    var days = (_zeroDay.getTime() - _today.getTime()) / (24 * 60 * 60 * 1000);
-    setCookie(cookieName, "", Math.round(days), path);
+    setCookie(cookieName, "", null, path);
 }
 
 export function getAllCookies(prefix?: string): string[] {
