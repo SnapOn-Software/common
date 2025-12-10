@@ -24,3 +24,6 @@ export interface iFileData {
 
 /** allow using Omit on complex join types */
 export type DeepOmit<T, K extends keyof T> = T extends any ? Omit<T, K> : never;
+
+/** return a success flag with either error message or the value */
+export type apiResultType<T> = { success: false, error: string } | { success: true, value: T };
