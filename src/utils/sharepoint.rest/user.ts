@@ -99,7 +99,7 @@ export function GetCurrentUserSync(siteUrl?: string, options?: {
 function _getUserRequestUrl(siteUrl: string, userId: number, expandGroups: boolean) {
     siteUrl = GetSiteUrl(siteUrl);
 
-    var url = `${GetRestBaseUrl(siteUrl)}/web/GetUserById(${userId})${expandGroups ? '?expand=Groups' : ''}`;
+    let url = `${GetRestBaseUrl(siteUrl)}/web/GetUserById(${userId})${expandGroups ? '?$expand=Groups' : ''}`;
     return url;
 }
 
@@ -138,7 +138,7 @@ export function GetUserSync(siteUrl?: string, userId?: number, options?: { expan
 function _getUserByLoginNameRequestUrl(siteUrl: string, loginName: string, expandGroups: boolean) {
     siteUrl = GetSiteUrl(siteUrl);
 
-    var url = `${GetRestBaseUrl(siteUrl)}/web/siteUsers/getByLoginName(@u)?@u='${encodeURIComponentEX(loginName, { singleQuoteMultiplier: 2 })}'${expandGroups ? '&expand=Groups' : ''}`;
+    var url = `${GetRestBaseUrl(siteUrl)}/web/siteUsers/getByLoginName(@u)?@u='${encodeURIComponentEX(loginName, { singleQuoteMultiplier: 2 })}'${expandGroups ? '&$expand=Groups' : ''}`;
     return url;
 }
 
@@ -181,7 +181,7 @@ export function GetUserByLoginSync(siteUrl?: string, loginName?: string, options
 function _getEnsureUserRequestUrl(siteUrl: string, loginName: string, expandGroups?: boolean) {
     siteUrl = GetSiteUrl(siteUrl);
 
-    var url = `${GetRestBaseUrl(siteUrl)}/web/ensureUser(@u)?@u='${encodeURIComponentEX(loginName, { singleQuoteMultiplier: 2 })}'${expandGroups ? '&expand=Groups' : ''}`;
+    var url = `${GetRestBaseUrl(siteUrl)}/web/ensureUser(@u)?@u='${encodeURIComponentEX(loginName, { singleQuoteMultiplier: 2 })}'${expandGroups ? '&$expand=Groups' : ''}`;
     return url;
 }
 

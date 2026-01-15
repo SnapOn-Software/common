@@ -1,5 +1,6 @@
 import { configInfo, SetDependencies } from './_dependencies';
-import { ConsoleLogger, logMessageValue, releasetypes } from './exports-index';
+import { releasetypes } from './types/common.types';
+import { ConsoleLogger, logMessageValue } from './utils/consolelogger';
 
 export interface iConfigInfo {
     BuildNumber: string;

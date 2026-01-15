@@ -11,8 +11,8 @@ import { LocaleKnownScript } from "../../utils/knownscript";
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, shortLocalCache } from "../rest";
 import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate, hasGlobalContext } from "./common";
-import { SPVersionToVersionId } from "./exports-index";
 import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./list";
+import { SPVersionToVersionId } from "./listutils/common";
 import { GetUser, GetUserSync } from "./user";
 
 const logger = ConsoleLogger.get("utils/sharepoint.rest/item");

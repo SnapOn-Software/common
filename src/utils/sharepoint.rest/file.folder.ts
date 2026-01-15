@@ -9,8 +9,8 @@ import { FileLevel, IFileInfoWithModerationStatus, ModerationStatus } from "../.
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache } from "../rest";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
-import { SPVersionToVersionId } from "./exports-index";
 import { GetListRestUrl } from "./list";
+import { SPVersionToVersionId } from "./listutils/common";
 
 const logger = ConsoleLogger.get("utils/sharepoint.rest/file.folder");
 
@@ -66,7 +66,7 @@ export function EnsureFolderPathSync(siteUrl: string, folderServerRelativeUrl: s
     let response = GetJsonSync<{ d: { Exists: boolean; }; }>(url, null, {
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
-    if (!isNullOrUndefined(response)       
+    if (!isNullOrUndefined(response)
         && !isNullOrUndefined(response.result)
         && !isNullOrUndefined(response.result.d)
         && response.result.d.Exists === true) {
@@ -109,7 +109,7 @@ export function EnsureFolderSync(siteUrl: string, parentFolderServerRelativeUrl:
 
     let response = GetJsonSync<{ d: { Exists: boolean; ServerRelativeUrl: string; }; }>(`${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${parentFolderServerRelativeUrl}')/folders/add(url='${folderName}')`, null, { method: "POST", spWebUrl: siteUrl })
 
-    if (!isNullOrUndefined(response)        
+    if (!isNullOrUndefined(response)
         && !isNullOrUndefined(response.result)
         && !isNullOrUndefined(response.result.d)) {
         return response.result.d;

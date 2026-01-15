@@ -2,6 +2,7 @@ import { CommonLogger } from "../config";
 import { isDebug } from "../helpers/debug";
 import { getFromFullName, isFunction, isNullOrEmptyString, isNullOrUndefined, isString, isTypeofFullNameNullOrUndefined, typeofFullName } from "../helpers/typecheckers";
 import { ksGlobal } from "../types/knownscript.types";
+import { getResourceNonce } from "./sharepoint.rest/common";
 
 const logger = new CommonLogger("sod");
 
@@ -104,14 +105,17 @@ export default class Sod {
 
     private static loadScript(url: string, successCallback: () => void, errCallback: () => void, sync = false) {
         let scriptElm = document.createElement("script");
+        scriptElm.className = "kwiz-sod";
+        scriptElm.setAttribute("nonce", getResourceNonce());
+        scriptElm.nonce = getResourceNonce();
+
         if (sync === true) {
             let req = new XMLHttpRequest();
             req.open("GET", url, false);
             req.send();
             scriptElm.appendChild(document.createTextNode(req.responseText));
             successCallback();
-        }
-        else {
+        } else {
             let agt = navigator.userAgent.toLowerCase();
             let ie8down = agt.indexOf("msie") !== -1 && parseInt(agt.substring(agt.indexOf("msie ") + 5), 10) <= 8;
 

@@ -197,7 +197,10 @@ export function isPrimitiveValue(obj: any): obj is primitiveTypes {
 }
 
 export function isValidGuid(str: string) {
-    var a = new RegExp("^[{|\\(]?[0-9a-fA-F]{8}[-]?([0-9a-fA-F]{4}[-]?){3}[0-9a-fA-F]{12}[\\)|}]?$");
+    if(isNullOrEmptyString(str)){
+        return false;
+    }
+    let a = new RegExp("^[{|\\(]?[0-9a-fA-F]{8}[-]?([0-9a-fA-F]{4}[-]?){3}[0-9a-fA-F]{12}[\\)|}]?$");
     return !!a.exec(str);
 }
 

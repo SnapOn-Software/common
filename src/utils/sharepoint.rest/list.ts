@@ -56,34 +56,63 @@ export function GetListIdFromPageSync(siteUrl: string, listPageUrl: string): str
     return null;
 }
 
-interface IGetSiteAssetLibraryResult { Id: string, Name: string, ServerRelativeUrl: string }
-interface IGetSiteAssetLibraryReturnValue {
-    value: {
-        Id: string;
-        RootFolder: {
-            Name: string;
-            ServerRelativeUrl: string;
-            Exists: boolean;
-        };
-    }[];
+interface IGetSiteAssetLibraryResult {
+    Id: string,
+    Name: string,
+    ServerRelativeUrl: string
+    LastItemUserModifiedDate: string;
+    LastItemModifiedDate: string;
+    Exists: boolean;
 }
+interface IGetSiteAssetLibraryReturnValue {
+    Id: string;
+    RootFolder: {
+        Name: string;
+        ServerRelativeUrl: string;
+        Exists: boolean;
+    };
+    LastItemUserModifiedDate: string;
+    LastItemModifiedDate: string;
+}
+
+let siteAssetLibrarySelectFields = [
+    "ID",
+    "RootFolder/Name",
+    "RootFolder/ServerRelativeUrl",
+    "RootFolder/Exists",
+    "LastItemModifiedDate",
+    "LastItemUserModifiedDate"
+];
+
+let siteAssetLibraryExpandFields = [
+    "RootFolder"
+];
 
 /** ensures the site assets library exists and return its info. on errors - it will return null. */
 export function EnsureAssetLibrary(siteUrl: string): Promise<IGetSiteAssetLibraryResult> {
     siteUrl = GetSiteUrl(siteUrl);
 
-    let url = GetRestBaseUrl(siteUrl) +
-        "/web/lists/EnsureSiteAssetsLibrary?$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists&$expand=RootFolder";
+    let url = `${GetRestBaseUrl(siteUrl)}/web/lists/EnsureSiteAssetsLibrary?$select=${siteAssetLibrarySelectFields.join(",")}&$expand=${siteAssetLibraryExpandFields.join(",")}`;
     return GetJson<{
-        d: { Id: string; RootFolder: { Name: string; ServerRelativeUrl: string; Exists: boolean; }; };
-    }>(url, null, { method: "POST", spWebUrl: siteUrl, ...longLocalCache }).then(result => {
-        if (result && result.d) {
-            return {
-                Id: result.d.Id,
-                Name: result.d.RootFolder.Name,
-                ServerRelativeUrl: result.d.RootFolder.ServerRelativeUrl
+        Id: string;
+        RootFolder: {
+            Name: string; ServerRelativeUrl: string; Exists: boolean;
+        };
+        LastItemModifiedDate: string;
+        LastItemUserModifiedDate: string;
+    }>(url, null, { method: "POST", spWebUrl: siteUrl, ...longLocalCache, jsonMetadata: jsonTypes.nometadata }).then(response => {
+        if (response) {
+            let result: IGetSiteAssetLibraryResult = {
+                Id: response.Id,
+                Name: response.RootFolder.Name,
+                ServerRelativeUrl: response.RootFolder.ServerRelativeUrl,
+                Exists: response.RootFolder.Exists,
+                LastItemModifiedDate: response.LastItemModifiedDate,
+                LastItemUserModifiedDate: response.LastItemUserModifiedDate
             };
-        } else return null;
+            return result;
+        }
+        return null;
     }).catch<IGetSiteAssetLibraryResult>(() => null);
 }
 
@@ -114,46 +143,59 @@ export async function EnsureSitePagesLibrary(siteUrl: string): Promise<IGetSiteP
 export function GetSiteAssetLibrary(siteUrl: string, sync?: false): Promise<IGetSiteAssetLibraryResult>;
 export function GetSiteAssetLibrary(siteUrl: string, sync: true): IGetSiteAssetLibraryResult;
 export function GetSiteAssetLibrary(siteUrl: string, sync?: boolean): IGetSiteAssetLibraryResult | Promise<IGetSiteAssetLibraryResult> {
-    let reqUrl = `${GetRestBaseUrl(siteUrl)}/web/lists?`
-        //Issue 1492: isSiteAssetsLibrary eq true does not work for reader users.
-        //+ `$filter=isSiteAssetsLibrary eq true&$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists`
-        + `$filter=EntityTypeName%20eq%20%27SiteAssets%27&$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists`
-        + `&$expand=RootFolder`;
+    siteUrl = GetSiteUrl(siteUrl);
+    // /_api/web/getlist('/sites/qa1/testings/SiteAssets')
+    // let reqUrl = `${GetRestBaseUrl(siteUrl)}/web/lists?`
+    //     //Issue 1492: isSiteAssetsLibrary eq true does not work for reader users.
+    //     //+ `$filter=isSiteAssetsLibrary eq true&$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists`
+    //     + `$filter=EntityTypeName%20eq%20%27SiteAssets%27`
+    //     + `&$select=${siteAssetLibrarySelectFields.join(",")}`
+    //     + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;
+
+    let siteAssetsUrl = `${siteUrl}SiteAssets`;
+    let reqUrl = `${GetRestBaseUrl(siteUrl)}/web/getlist(@u)?@u='${encodeURIComponent(siteAssetsUrl)}'`
+        + `&$select=${siteAssetLibrarySelectFields.join(",")}`
+        + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;
 
     let caller = sync ? GetJsonSync : GetJson;
 
-    let result = caller<IGetSiteAssetLibraryReturnValue>(reqUrl, null, {
-        ...longLocalCache, jsonMetadata: jsonTypes.nometadata,
+    let response = caller<IGetSiteAssetLibraryReturnValue>(reqUrl, null, {
+        ...longLocalCache,
+        jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
 
-    let transform: (v: IGetSiteAssetLibraryReturnValue) => IGetSiteAssetLibraryResult = (v) => {
-        if (isNotEmptyArray(v && v.value)) {
-            let assetLibrary = v.value[0];
+    let transform = (v: IGetSiteAssetLibraryReturnValue): IGetSiteAssetLibraryResult => {
+        if (!isNullOrUndefined(v)) {
             return {
-                Id: assetLibrary.Id,
-                Name: assetLibrary.RootFolder.Name,
-                ServerRelativeUrl: assetLibrary.RootFolder.ServerRelativeUrl
+                Id: v.Id,
+                Name: v.RootFolder.Name,
+                ServerRelativeUrl: v.RootFolder.ServerRelativeUrl,
+                LastItemModifiedDate: v.LastItemModifiedDate,
+                LastItemUserModifiedDate: v.LastItemUserModifiedDate,
+                Exists: v.RootFolder.Exists
             };
         }
         return null;
     };
 
-    if (isPromise(result))
-        return result.then(r => transform(r), () => null);
-    else
-        return result.success ? transform(result.result) : null;
+    if (isPromise(response)) {
+        return response.then(r => transform(r), () => null);
+    } else {
+        return response.success ? transform(response.result) : null;
+    }
 }
 
 /** Return the list Title */
 export function GetListTitle(siteUrl: string, listIdOrTitle: string): Promise<string> {
     siteUrl = GetSiteUrl(siteUrl);
 
-    return GetJson<{ d: { Title: string; }; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/Title`, null, {
+    return GetJson<{ value: string; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/Title`, null, {
         allowCache: true,
-        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        spWebUrl: siteUrl,
+        jsonMetadata: jsonTypes.nometadata//allow getDigest to work when not in SharePoint
     }).then(r => {
-        return r.d.Title;
+        return r.value;
     }).catch<string>(() => null);
 }
 
@@ -171,11 +213,11 @@ export function GetList(siteUrlOrId: string, listIdOrTitle: string, options?: {
         return null;
     }
 
-    return GetJson<{ d: iList; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, {
+    return GetJson<iList>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, {
         allowCache: true,
-        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
-    }).then(async r => {
-        let list = r.d;
+        spWebUrl: siteUrl,//allow getDigest to work when not in SharePoint
+        jsonMetadata: jsonTypes.nometadata
+    }).then(async list => {
         if (options) {
             let promises = [];
 
@@ -222,12 +264,13 @@ export function GetListSync(siteUrl: string, listIdOrTitle: string): iList {
 
     if (isNullOrEmptyString(listIdOrTitle)) return null;
 
-    let result = GetJsonSync<{ d: iList; }>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, {
+    let result = GetJsonSync<iList>(GetListRestUrl(siteUrl, listIdOrTitle) + `?$select=${LIST_SELECT}&$expand=${LIST_EXPAND}`, null, {
         ...shortLocalCache,
-        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        spWebUrl: siteUrl,//allow getDigest to work when not in SharePoint,
+        jsonMetadata: jsonTypes.nometadata
     });
     if (result && result.success) {
-        let list = result.result.d;
+        let list = result.result;
 
         if (list.EffectiveBasePermissions
             && (isString(list.EffectiveBasePermissions.High)
@@ -255,32 +298,30 @@ export async function GetListName(webUrl: string, listIdOrTitle: string) {
 
 export function GetListRootFolder(siteUrlOrId: string, listIdOrTitle: string): Promise<{ ServerRelativeUrl: string; Name: string; }> {
     let siteUrl = GetSiteUrl(siteUrlOrId);
-
-    return GetJson<{
-        d: { ServerRelativeUrl: string; Name: string; };
-    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/RootFolder?$Select=Name,ServerRelativeUrl`,
+    let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/RootFolder?$Select=Name,ServerRelativeUrl`;
+    return GetJson<{ ServerRelativeUrl: string; Name: string; }>(url,
         null, {
         ...longLocalCache,
-        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        spWebUrl: siteUrl,//allow getDigest to work when not in SharePoint,
+        jsonMetadata: jsonTypes.nometadata
     })
-        .then(r => {
-            return r.d;
+        .then(rootFolder => {
+            return rootFolder;
         })
         .catch<{ ServerRelativeUrl: string; Name: string; }>(() => null);
 }
 
 export function GetListRootFolderSync(siteUrlOrId: string, listIdOrTitle: string): { ServerRelativeUrl: string; Name: string; } {
     let siteUrl = GetSiteUrl(siteUrlOrId);
-
-    let result = GetJsonSync<{
-        d: { ServerRelativeUrl: string; Name: string; };
-    }>(GetListRestUrl(siteUrl, listIdOrTitle) + `/RootFolder?$Select=Name,ServerRelativeUrl`,
+    let url = GetListRestUrl(siteUrl, listIdOrTitle) + `/RootFolder?$Select=Name,ServerRelativeUrl`;
+    let response = GetJsonSync<{ ServerRelativeUrl: string; Name: string; }>(url,
         null, {
         ...longLocalCache,
-        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+        spWebUrl: siteUrl,//allow getDigest to work when not in SharePoint
+        jsonMetadata: jsonTypes.nometadata
     });
 
-    return SafeIfElse(() => result.result.d, null);
+    return SafeIfElse(() => response.result, null);
 }
 
 export function GetListField(siteUrlOrId: string, listIdOrTitle: string, fieldIdOrName: string, refreshCache?: boolean): Promise<IFieldInfo> {
