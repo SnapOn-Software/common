@@ -1,4 +1,3 @@
-import { typeMonentJSTimeZone } from "../../exports-index";
 import { sortArray } from "../../helpers/collections.base";
 import { isISODate, isISODateUTC } from "../../helpers/date";
 import { jsonStringify } from "../../helpers/json";
@@ -9,6 +8,7 @@ import { normalizeGuid } from "../../helpers/strings";
 import { isDate, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumeric, isString, isTypeofFullNameNullOrUndefined, isValidGuid } from "../../helpers/typecheckers";
 import { makeFullUrl, makeServerRelativeUrl, normalizeUrl } from "../../helpers/url";
 import { IDictionary } from "../../types/common.types";
+import { typeMonentJSTimeZone } from "../../types/moment";
 import { IRestOptions, jsonTypes } from "../../types/rest.types";
 import { IContextWebInformation, IFieldInfoEX, IFolderInfo, IRententionLabel, ISiteGroupInfo, IUserCustomActionInfo, IWebInfo, SPBasePermissionKind } from "../../types/sharepoint.types";
 import { IAppTile, IGroupInfo, IRestRoleDefinition, IRootWebInfo, ISiteInfo, ITimeZone, IUserInfo, IWebBasicInfo, IWebRegionalSettings, WebTypes, iContentType, iList } from "../../types/sharepoint.utils.types";
@@ -1752,5 +1752,12 @@ export async function GetWebAssociatedGroups(siteUrl?: string) {
 // todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
 // bundled package size
 if (typeof window !== "undefined") {
-    MomentTimezoneJSKnownScript.load();
+    window.setTimeout(() => {
+        try {
+            MomentTimezoneJSKnownScript.load();
+            console.log(`loaded moment timezone module`);
+        } catch {
+            console.log(`moment timezone module is undefined`);
+        }
+    }, 33);
 }

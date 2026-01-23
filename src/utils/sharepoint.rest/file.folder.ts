@@ -9,8 +9,8 @@ import { FileLevel, IFileInfoWithModerationStatus, ModerationStatus } from "../.
 import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache } from "../rest";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
-import { SPVersionToVersionId } from "./exports-index";
 import { GetListRestUrl } from "./list";
+import { SPVersionToVersionId } from "./listutils/common";
 
 const logger = ConsoleLogger.get("utils/sharepoint.rest/file.folder");
 
@@ -53,6 +53,45 @@ export async function EnsureFolderPath(siteUrl: string, folderServerRelativeUrl:
     return false;
 }
 
+export function EnsureFolderPathSync(siteUrl: string, folderServerRelativeUrl: string): boolean {
+    siteUrl = GetSiteUrl(siteUrl);
+
+    //issue 7176
+    folderServerRelativeUrl = makeServerRelativeUrl(folderServerRelativeUrl, siteUrl);
+    if (existingFolders.indexOf(folderServerRelativeUrl) >= 0) {
+        return true;
+    }
+
+    let url = `${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${folderServerRelativeUrl}')?$select=exists`;
+    let response = GetJsonSync<{ d: { Exists: boolean; }; }>(url, null, {
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
+    if (!isNullOrUndefined(response)
+        && !isNullOrUndefined(response.result)
+        && !isNullOrUndefined(response.result.d)
+        && response.result.d.Exists === true) {
+        existingFolders.push(folderServerRelativeUrl);
+        return true;
+    } else {
+        let parts = folderServerRelativeUrl.split('/');
+        if (parts.length > 1) {
+            let parentFolder = parts.slice(0, parts.length - 1).join('/');
+
+            //ensure parent
+            let parent = EnsureFolderPathSync(siteUrl, parentFolder);
+            if (parent) {
+                //create it
+                let ensure = EnsureFolderSync(siteUrl, parentFolder, parts[parts.length - 1]);
+                if (ensure.Exists) {
+                    existingFolders.push(folderServerRelativeUrl);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 export function EnsureFolder(siteUrl: string, parentFolderServerRelativeUrl: string, folderName: string): Promise<{ Exists: boolean; ServerRelativeUrl?: string; }> {
     siteUrl = GetSiteUrl(siteUrl);
 
@@ -61,6 +100,21 @@ export function EnsureFolder(siteUrl: string, parentFolderServerRelativeUrl: str
     return GetJson<{ d: { Exists: boolean; ServerRelativeUrl: string; }; }>(`${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${parentFolderServerRelativeUrl}')/folders/add(url='${folderName}')`, null, { method: "POST", spWebUrl: siteUrl })
         .then(r => { return r.d; })
         .catch<{ Exists: boolean; ServerRelativeUrl?: string; }>(() => { return { Exists: false }; });
+}
+
+export function EnsureFolderSync(siteUrl: string, parentFolderServerRelativeUrl: string, folderName: string): { Exists: boolean; ServerRelativeUrl?: string; } {
+    siteUrl = GetSiteUrl(siteUrl);
+
+    parentFolderServerRelativeUrl = makeServerRelativeUrl(parentFolderServerRelativeUrl, siteUrl);
+
+    let response = GetJsonSync<{ d: { Exists: boolean; ServerRelativeUrl: string; }; }>(`${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${parentFolderServerRelativeUrl}')/folders/add(url='${folderName}')`, null, { method: "POST", spWebUrl: siteUrl })
+
+    if (!isNullOrUndefined(response)
+        && !isNullOrUndefined(response.result)
+        && !isNullOrUndefined(response.result.d)) {
+        return response.result.d;
+    }
+    return { Exists: false };
 }
 
 export function DeleteFolder(siteUrl: string, folderUrl: string): Promise<boolean> {

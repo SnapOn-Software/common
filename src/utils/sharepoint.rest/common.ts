@@ -1,4 +1,6 @@
+import { firstOrNull } from "../../helpers/collections.base";
 import { jsonParse } from "../../helpers/json";
+import { normalizeGuid } from "../../helpers/strings";
 import { isNullOrEmptyString, isNullOrUndefined, isString, isValidGuid } from "../../helpers/typecheckers";
 import { makeServerRelativeUrl, normalizeUrl } from "../../helpers/url";
 import { IDictionary } from "../../types/common.types";
@@ -46,9 +48,12 @@ export function GetFileSiteUrl(fileUrl: string): string {
  * If you send a guid - it will look for a site with that ID in the current context site collection
  */
 export function GetSiteUrl(siteUrlOrId?: string): string {
-    if (!isNullOrUndefined(siteUrlOrId) && isValidGuid(siteUrlOrId)) {
+    if (isValidGuid(siteUrlOrId)) {
+        if (hasGlobalContext() && normalizeGuid(siteUrlOrId) === normalizeGuid(_spPageContextInfo.webId)) {
+            return normalizeUrl(_spPageContextInfo.webServerRelativeUrl, true);
+        }
         const webInfo = GetWebInfoSync(null, siteUrlOrId);
-        return makeServerRelativeUrl(normalizeUrl(webInfo.ServerRelativeUrl, true));
+        return normalizeUrl(webInfo.ServerRelativeUrl, true);
     }
     return GetSiteUrlLocally(siteUrlOrId);
 }
@@ -58,10 +63,11 @@ export function GetSiteUrlLocally(siteUrl?: string): string {
     if (isNullOrUndefined(siteUrl)) {
         if (hasGlobalContext()) {
             siteUrl = _spPageContextInfo.webServerRelativeUrl;
-            if (_spPageContextInfo.isAppWeb)//#1300 if in a classic app sub-site
+            if (_spPageContextInfo.isAppWeb) {
+                //#1300 if in a classic app sub-site
                 siteUrl = siteUrl.substring(0, siteUrl.lastIndexOf("/"));
-        }
-        else {
+            }
+        } else {
             siteUrl = GetFileSiteUrl(window.location.pathname);
         }
     }
@@ -158,4 +164,18 @@ export function __getSPRestErrorData(restError: IRestError) {
     }
     logger.error(errorMessage);
     return { code: code, message: errorMessage } as ISPRestError;
+}
+
+export function getResourceNonce() {
+    try {
+        let scriptEles: HTMLScriptElement[] = Array.from(document.querySelectorAll("script[nonce]"));
+        let scriptEle = firstOrNull(scriptEles, (item) => {
+            return item.nonce !== null;
+        })
+        if (!isNullOrUndefined(scriptEle)) {
+            return scriptEle.nonce;
+        }
+    } catch {
+    }
+    return "";
 }
