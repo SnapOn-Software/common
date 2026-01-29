@@ -100,7 +100,13 @@ export function EnsureAssetLibrary(siteUrl: string): Promise<IGetSiteAssetLibrar
         };
         LastItemModifiedDate: string;
         LastItemUserModifiedDate: string;
-    }>(url, null, { method: "POST", spWebUrl: siteUrl, ...longLocalCache, jsonMetadata: jsonTypes.nometadata }).then(response => {
+    }>(url, null, {
+        method: "POST",
+        spWebUrl: siteUrl,
+        ...longLocalCache,
+        jsonMetadata: jsonTypes.nometadata,
+        includeDigestInPost: true
+    }).then(response => {
         if (response) {
             let result: IGetSiteAssetLibraryResult = {
                 Id: response.Id,
@@ -145,28 +151,24 @@ export function GetSiteAssetLibrary(siteUrl: string, sync: true): IGetSiteAssetL
 export function GetSiteAssetLibrary(siteUrl: string, sync?: boolean): IGetSiteAssetLibraryResult | Promise<IGetSiteAssetLibraryResult> {
     siteUrl = GetSiteUrl(siteUrl);
     // /_api/web/getlist('/sites/qa1/testings/SiteAssets')
-    // let reqUrl = `${GetRestBaseUrl(siteUrl)}/web/lists?`
-    //     //Issue 1492: isSiteAssetsLibrary eq true does not work for reader users.
-    //     //+ `$filter=isSiteAssetsLibrary eq true&$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists`
-    //     + `$filter=EntityTypeName%20eq%20%27SiteAssets%27`
-    //     + `&$select=${siteAssetLibrarySelectFields.join(",")}`
-    //     + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;
-
-    let siteAssetsUrl = `${siteUrl}SiteAssets`;
-    let reqUrl = `${GetRestBaseUrl(siteUrl)}/web/getlist(@u)?@u='${encodeURIComponent(siteAssetsUrl)}'`
+    let reqUrl = `${GetRestBaseUrl(siteUrl)}/web/lists?`
+        //Issue 1492: isSiteAssetsLibrary eq true does not work for reader users.
+        //+ `$filter=isSiteAssetsLibrary eq true&$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists`
+        + `$filter=EntityTypeName%20eq%20%27SiteAssets%27`
         + `&$select=${siteAssetLibrarySelectFields.join(",")}`
-        + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;
+        + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;    
 
     let caller = sync ? GetJsonSync : GetJson;
 
-    let response = caller<IGetSiteAssetLibraryReturnValue>(reqUrl, null, {
+    let response = caller<{ value: IGetSiteAssetLibraryReturnValue[] }>(reqUrl, null, {
         ...longLocalCache,
         jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
 
-    let transform = (v: IGetSiteAssetLibraryReturnValue): IGetSiteAssetLibraryResult => {
-        if (!isNullOrUndefined(v)) {
+    let transform = (values: IGetSiteAssetLibraryReturnValue[]): IGetSiteAssetLibraryResult => {
+        if (!isNullOrEmptyArray(values)) {
+            let v = values[0]
             return {
                 Id: v.Id,
                 Name: v.RootFolder.Name,
@@ -180,9 +182,9 @@ export function GetSiteAssetLibrary(siteUrl: string, sync?: boolean): IGetSiteAs
     };
 
     if (isPromise(response)) {
-        return response.then(r => transform(r), () => null);
+        return response.then(r => transform(r.value), () => null);
     } else {
-        return response.success ? transform(response.result) : null;
+        return response.success ? transform(response.result.value) : null;
     }
 }
 
