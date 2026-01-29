@@ -563,7 +563,15 @@ export async function CreateField(siteUrl: string, listIdOrTitle: string, option
         }
         catch (e) { }
 
-        return firstOrNull(fields, f => f.InternalName === internalName);
+        let foundField = firstOrNull(fields, f => f.InternalName === internalName);
+        if (!foundField) {
+            //try again... sometimes the new field is not there first try...
+            //especially in inake forms when form is creating 10+ missing columns
+            fields = await GetListFields(siteUrl, listIdOrTitle, { refreshCache: true });
+            foundField = firstOrNull(fields, f => f.InternalName === internalName);
+        }
+
+        return foundField;
     };
 
     if (!isNullOrEmptyString(options.SchemaXml)) {
