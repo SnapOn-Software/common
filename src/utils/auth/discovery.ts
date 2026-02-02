@@ -1,7 +1,9 @@
 import { promiseOnce } from "../../helpers/promises";
-import { isNullOrEmptyString, isValidGuid } from "../../helpers/typecheckers";
+import { normalizeGuid } from "../../helpers/strings";
+import { isNullOrEmptyString, isNullOrUndefined, isValidGuid } from "../../helpers/typecheckers";
 import { AzureEnvironment, ITenantInfo } from "../../types/auth";
 import { GetJson, GetJsonSync } from "../rest";
+import { hasGlobalContext } from "../sharepoint.rest/common";
 
 interface IOpenidConfiguration {
     token_endpoint: string;//https://login.microsoftonline.com/7d034656-be03-457d-8d82-60e90cf5f400/oauth2/token
@@ -68,6 +70,29 @@ export function DiscoverTenantInfo(hostNameOrId: string, sync: true): ITenantInf
 export function DiscoverTenantInfo(hostNameOrId: string, sync?: boolean): ITenantInfo | Promise<ITenantInfo> {
     hostNameOrId = hostNameOrId.toLowerCase();
 
+    if ("location" in globalThis && hasGlobalContext()) {
+        if (!isValidGuid(hostNameOrId)) {
+            try {
+                let host1 = new URL(hostNameOrId).host.toLowerCase();
+                let host2 = window.location.host.toLowerCase();
+
+                if (host1 === host2) {
+                    let info = _getTenantInfoFromContext();
+                    if (!isNullOrUndefined(info)) {
+                        return info;
+                    }
+                }
+            } catch {
+            }
+        } else if (isValidGuid(_spPageContextInfo.aadTenantId)
+            && normalizeGuid(hostNameOrId) === normalizeGuid(_spPageContextInfo.aadTenantId)) {
+            let info = _getTenantInfoFromContext();
+            if (!isNullOrUndefined(info)) {
+                return info;
+            }
+        }
+    }
+
     let friendlyName = "";
 
     if (isValidGuid(hostNameOrId)) {
@@ -103,6 +128,25 @@ export function DiscoverTenantInfo(hostNameOrId: string, sync?: boolean): ITenan
     }
 }
 
+function _getTenantInfoFromContext() {
+    if (!hasGlobalContext()
+        || !("location" in globalThis)
+        || !isValidGuid(_spPageContextInfo.aadTenantId)
+        || isNullOrEmptyString(_spPageContextInfo["aadInstanceUrl"])
+        || isNullOrEmptyString(_spPageContextInfo["msGraphEndpointUrl"])
+    ) {
+        return null;
+    }
+
+    let environment = GetAzureEnvironmentFromAzureADLogin(_spPageContextInfo["aadInstanceUrl"]);
+    return {
+        environment: environment,
+        idOrName: normalizeGuid(_spPageContextInfo.aadTenantId),
+        authorityUrl: _spPageContextInfo["aadInstanceUrl"],
+        msGraphHost: new URL(_spPageContextInfo["msGraphEndpointUrl"]).host
+    } as ITenantInfo;
+}
+
 export function AutoDiscoverTenantInfo(sync?: false): Promise<ITenantInfo>
 export function AutoDiscoverTenantInfo(sync: true): ITenantInfo
 export function AutoDiscoverTenantInfo(sync?: boolean): ITenantInfo | Promise<ITenantInfo> {
@@ -130,12 +174,31 @@ export function GetEnvironmentFromACSEndPoint(ACSEndPoint: string): AzureEnviron
 
 export function GetAzureADLoginEndPoint(environment: AzureEnvironment): string {
     switch (environment) {
-        case AzureEnvironment.Germany: return "https://login.microsoftonline.de";
-        case AzureEnvironment.China: return "https://login.chinacloudapi.cn";
-        case AzureEnvironment.USGovernmentHigh: return "https://login.microsoftonline.us";
-        case AzureEnvironment.PPE: return "https://login.windows-ppe.net";
+        case AzureEnvironment.Germany:
+            return "https://login.microsoftonline.de";
+        case AzureEnvironment.China:
+            return "https://login.chinacloudapi.cn";
+        case AzureEnvironment.USGovernmentHigh:
+            return "https://login.microsoftonline.us";
+        case AzureEnvironment.PPE:
+            return "https://login.windows-ppe.net";
         case AzureEnvironment.Production:
         default:
             return "https://login.microsoftonline.com";
+    }
+}
+
+export function GetAzureEnvironmentFromAzureADLogin(login: string) {
+    switch (login) {
+        case "https://login.microsoftonline.de":
+            return AzureEnvironment.Germany;
+        case "https://login.chinacloudapi.cn":
+            return AzureEnvironment.China;
+        case "https://login.microsoftonline.us":
+            return AzureEnvironment.USGovernmentHigh;
+        case "https://login.windows-ppe.net":
+            return AzureEnvironment.PPE;
+        default:
+            return AzureEnvironment.Production;
     }
 }
