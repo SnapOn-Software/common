@@ -73,7 +73,7 @@ export function DiscoverTenantInfo(hostNameOrId: string, sync?: boolean): ITenan
     if ("location" in globalThis && hasGlobalContext()) {
         if (!isValidGuid(hostNameOrId)) {
             try {
-                let host1 = new URL(hostNameOrId).host.toLowerCase();
+                let host1 = hostNameOrId.toLowerCase();
                 let host2 = window.location.host.toLowerCase();
 
                 if (host1 === host2) {
