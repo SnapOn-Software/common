@@ -110,6 +110,7 @@ export interface iListView {
     DefaultView: boolean;
     ReadOnlyView: boolean;
     ViewFields?: string[];
+    CustomFormatter?: string;
 }
 
 export interface IListWorkflowAssociation {

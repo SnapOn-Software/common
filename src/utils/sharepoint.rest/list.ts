@@ -855,7 +855,7 @@ export interface IListViewOptions { includeViewFields?: boolean; }
 export function GetListViews(siteUrl: string, listIdOrTitle: string, options?: IListViewOptions, refreshCache = false): Promise<iListView[]> {
     siteUrl = GetSiteUrl(siteUrl);
 
-    let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/views?$select=Title,Id,ServerRelativeUrl,RowLimit,Paged,ViewQuery,ListViewXml,PersonalView,MobileView,MobileDefaultView,Hidden,DefaultView,ReadOnlyView${options && options.includeViewFields ? "&$expand=ViewFields" : ""}`
+    let url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/views?$select=Title,Id,ServerRelativeUrl,RowLimit,Paged,ViewQuery,ListViewXml,PersonalView,MobileView,MobileDefaultView,Hidden,DefaultView,ReadOnlyView,CustomFormatter${options && options.includeViewFields ? "&$expand=ViewFields" : ""}`
     return GetJson<{
         value: iListView[];
     }>(url,

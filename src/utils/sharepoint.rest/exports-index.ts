@@ -10,3 +10,4 @@ export * from './sp-people-search-service';
 export * from './timzone-map';
 export * from './user';
 export * from './web';
+export * from './webparts';

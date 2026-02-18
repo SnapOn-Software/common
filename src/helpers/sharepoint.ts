@@ -616,13 +616,24 @@ export function IsFolderContentType(contentTypeId: string) {
 }
 
 export enum PageContainerTypes {
-    M365SPFx, M365OOBListForm,
-    SP2019SPFx, SP2019ListForm
+    M365SPFx,
+    M365OOBListForm,
+    SP2019SPFx,
+    SP2019ListForm,
+    M365ListView
 }
 export function GetModernPageContainers() {
     let mainContent: HTMLElement = document.querySelector("section.mainContent");
     if (mainContent)
         return { mainContent, commandBar: document.querySelector(".commandBarWrapper") as HTMLElement, type: PageContainerTypes.M365SPFx };
+
+    if ("location" in globalThis
+        && globalThis.location.pathname.toLowerCase().indexOf("kwizform.aspx") !== -1) {
+        mainContent = document.querySelector(".Files-contentAreaFlexContainer");
+        if (mainContent) {
+            return { mainContent, commandBar: null, type: PageContainerTypes.M365ListView };
+        }
+    }
 
     mainContent = document.querySelector("div[class^=canvasWrapper]");//document.querySelector("div.SPCanvas");
     if (mainContent)
