@@ -60,6 +60,11 @@ export async function promiseOnce<T>(key: string, promiseFunc: () => Promise<T>,
     return promises[key];
 }
 
+export function promiseOnceClearCache() {
+    let _global = _getGlobal();
+    _global.promises = {};
+}
+
 /**
  * Runs all promises in sequential order.
  * @param {(() => Promise<T>)[]} asyncFuncs - Array of functions that return the promises to fullfill. 
