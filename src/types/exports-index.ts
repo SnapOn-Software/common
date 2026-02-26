@@ -13,3 +13,4 @@ export * from './regex.types';
 export * from './rest.types';
 export * from './sharepoint.types';
 export * from './sharepoint.utils.types';
+export * from './webpart.types';
