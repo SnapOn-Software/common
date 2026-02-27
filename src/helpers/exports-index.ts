@@ -7,6 +7,7 @@ export * from './browserinfo';
 export * from './collections.base';
 export * from './collections';
 export * from './color';
+export * from './console';
 export * from './constants';
 export * from './cookies';
 export * from './date';
