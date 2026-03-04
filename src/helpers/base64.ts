@@ -143,7 +143,7 @@ function decode(string: string): Uint8Array {
 
 export function toArrayBuffer(base64: string): ArrayBuffer {
     var uint8Array = decode(base64);
-    return uint8Array.buffer;
+    return buffersToArrayBuffer(uint8Array);
 }
 
 export function toUint8Array(base64: string): Uint8Array {
@@ -155,7 +155,7 @@ export function fromArrayBuffer(arraybuffer: ArrayBuffer) {
 }
 
 export function fromUint8Array(uint8Array: Uint8Array) {
-    return encode(uint8Array.buffer);
+    return encode(buffersToArrayBuffer(uint8Array));
 }
 
 export function dataURLtoFile(dataurl, filename): File {
@@ -171,4 +171,15 @@ export function dataURLtoFile(dataurl, filename): File {
     }
 
     return new File([u8arr], filename, { type: mime });
+}
+
+export function buffersToArrayBuffer(buffer: Buffer[] | Uint8Array): ArrayBuffer {
+    const c = (buffer instanceof Uint8Array)
+        ? buffer
+        : Buffer.concat(buffer);
+
+    return c.slice(
+        c.byteOffset ?? 0,
+        (c.byteOffset ?? 0) + (c.byteLength ?? c.length)
+    ).buffer;
 }
