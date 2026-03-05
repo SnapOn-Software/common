@@ -179,7 +179,7 @@ export function buffersToArrayBuffer(buffer: Buffer[] | Uint8Array): ArrayBuffer
         : Buffer.concat(buffer);
 
     return c.slice(
-        c.byteOffset ?? 0,
-        (c.byteOffset ?? 0) + (c.byteLength ?? c.length)
+        c.byteOffset != null ? c.byteOffset : 0,
+        (c.byteOffset != null ? c.byteOffset : 0) + (c.byteLength != null ? c.byteLength : c.length)
     ).buffer;
 }
