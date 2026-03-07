@@ -174,12 +174,17 @@ export function dataURLtoFile(dataurl, filename): File {
 }
 
 export function buffersToArrayBuffer(buffer: Buffer[] | Uint8Array): ArrayBuffer {
-    const c = (buffer instanceof Uint8Array)
-        ? buffer
-        : Buffer.concat(buffer);
-
-    return c.slice(
-        c.byteOffset != null ? c.byteOffset : 0,
-        (c.byteOffset != null ? c.byteOffset : 0) + (c.byteLength != null ? c.byteLength : c.length)
-    ).buffer;
+    if (buffer instanceof Uint8Array) {
+        return buffer.slice(
+            buffer.byteOffset || 0,
+            (buffer.byteOffset || 0) + (buffer.byteLength || buffer.length)
+        ).buffer;
+    }
+    else {
+        const c = Buffer.concat(buffer);
+        return c.buffer.slice(
+            c.byteOffset || 0,
+            (c.byteOffset || 0) + (c.byteLength || c.length)
+        );
+    }
 }
