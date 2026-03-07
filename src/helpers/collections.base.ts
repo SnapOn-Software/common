@@ -213,12 +213,23 @@ export function sizeOf(obj: any) {
     return Object.keys(obj).length;
 }
 
-export function chunkArray<T>(array: T[], chunkSize: number) {
-    let chunkedArray: T[][] = [];
-    for (var i = 0; i < array.length; i += chunkSize) {
-        chunkedArray.push(array.slice(i, i + chunkSize));
+export function chunkArray<T>(array: T[], maxChunkSize: number): T[][] {
+    const result: T[][] = [];
+    let remaining = array.length;
+    let index = 0;
+
+    let chunks = Math.ceil(array.length / maxChunkSize);
+
+    while (chunks > 0) {
+        const size = Math.ceil(remaining / chunks);
+        result.push(array.slice(index, index + size));
+
+        index += size;
+        remaining -= size;
+        chunks--;
     }
-    return chunkedArray;
+
+    return result;
 }
 
 /** Takes an array and transforms it into a hash. this will assign 1 item per key, assumig getKey will be unique per item. */
