@@ -16,5 +16,5 @@ export function kwiz_cdn_root() {
     //         ? kwiz_cdn_hostname_fastring
     //         : kwiz_cdn_hostname_production}`;
 
-    return kwiz_cdn_hostname_production;
+    return `https://${kwiz_cdn_hostname_production}`
 }
