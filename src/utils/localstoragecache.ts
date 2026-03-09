@@ -1,6 +1,6 @@
 import { sizeOf } from "../helpers/collections.base";
 import { isDebug } from "../helpers/debug";
-import { flatted } from "../helpers/flatted";
+import { parse as FlattedParse, stringify as FlattedStringify } from "../helpers/flatted";
 import { jsonParse } from "../helpers/json";
 import { getGlobal } from "../helpers/objects";
 import { isDate, isNullOrEmptyString, isNullOrUndefined, isNumber } from "../helpers/typecheckers";
@@ -260,7 +260,7 @@ export function getCacheItem<T>(key: string, options?: {
         let isExpired = _isKeyExpired(keyWithPrefix);
 
         if (!isExpired) {
-            let valueAsT: T = options && options.useFlatted ? flatted.parse(value) as T : jsonParse<T>(value);
+            let valueAsT: T = options && options.useFlatted ? FlattedParse(value) as T : jsonParse<T>(value);
             if (valueAsT !== null) {
                 _cache[key] = valueAsT;
                 return valueAsT;
@@ -287,7 +287,7 @@ export function setCacheItem(key: string, value: any, expiration: number | ILoca
         var val = null;
         try {
             if (options && options.useFlatted)
-                val = flatted.stringify(value);
+                val = FlattedStringify(value);
             else
                 val = JSON.stringify(value);
         } catch (ex) {

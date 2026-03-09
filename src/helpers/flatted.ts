@@ -71,7 +71,7 @@ const set = (known, input, value) => {
     return index;
 };
 
-const parse = (text, reviver?) => {
+export const parse = (text, reviver?) => {
     const input = $parse(text, Primitives).map(primitives);
     const value = input[0];
     const $ = reviver || noop;
@@ -82,7 +82,7 @@ const parse = (text, reviver?) => {
 };
 //exports.parse = parse;
 
-const stringify = (value, replacer?, space?) => {
+export const stringify = (value, replacer?, space?) => { 
     const $ = replacer && typeof replacer === object ?
         (k, v) => (k === '' || -1 < replacer.indexOf(k) ? v : void 0) :
         (replacer || noop);
@@ -114,9 +114,9 @@ const stringify = (value, replacer?, space?) => {
 };
 //exports.stringify = stringify;
 
-const toJSON = any => $parse(stringify(any));
+export const toJSON = any => $parse(stringify(any));
 //exports.toJSON = toJSON;
-const fromJSON = any => parse($stringify(any));
+export const fromJSON = any => parse($stringify(any));
 //exports.fromJSON = fromJSON;
 
 
