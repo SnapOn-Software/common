@@ -8,7 +8,8 @@ import { contentTypes, jsonTypes } from "../../types/rest.types";
 import { ISiteGroupInfo, PrincipalType } from "../../types/sharepoint.types";
 import { IGroupInfo, IUserGroupInfo, IUserInfo } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
-import { GetJson, GetJsonSync, longLocalCache, shortLocalCache } from "../rest";
+import { GetJson, GetJsonSync } from "../rest";
+import { longLocalCache, shortLocalCache } from "../rest.vars";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 import { GetSiteId } from "./web";
 

@@ -1,6 +1,7 @@
 import { kwiz_cdn_root } from "../helpers/constants";
 import { isValidEmail } from "../helpers/emails";
-import { GetJsonSync, longLocalCache } from "./rest";
+import { GetJsonSync } from "./rest";
+import { longLocalCache } from "./rest.vars";
 
 
 /** returns true if a valid email that is from a known free email provider */

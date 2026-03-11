@@ -28,7 +28,7 @@
         "build:cjs": "tsc -p tsconfig.cjs.json",
         "build:test": "tsc -p tsconfig.test.json",
         "build-explain": "tsc --explainFiles",
-        "check-dependencies": "madge --circular ./src",
+        "check-dependencies": "npx dpdm --no-tree --no-warning ./src/index.ts",
         "yalc-link": "yalc publish",
         "unit-test": "node --import tsx --test src",
         "test": "npm run build:cjs && npm run build:test && mocha",
@@ -37,6 +37,7 @@
         "___do_not_use_npm-publish": "npm publish --access public",
         "reset-repo": "git fetch origin && git reset --hard origin/main",
         "reindex-project": "cti create ./src -i _dependencies -w -b -n -o exports-index.ts && node fix-folder-imports.js",
+        "remove-all-index-files": "cd src && del /s /f /q exports-index.ts",
         "clear-npm-cache": "npm cache clean --force"
     },
     "repository": {

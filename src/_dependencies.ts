@@ -1,4 +1,4 @@
-import { iConfigInfo, iConfigParams } from "./config";
+import { iConfigInfo, iConfigParams } from "./types/config.typs";
 
 export const configInfo: iConfigInfo = {
     BuildNumber: "unset",

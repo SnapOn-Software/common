@@ -7,7 +7,8 @@ import { IRequestBody, IRestOptions, IRestResponseType, jsonTypes } from "../../
 import { IFolderBasicInfo, IFolderInfo } from "../../types/sharepoint.types";
 import { FileLevel, IFileInfoWithModerationStatus, ModerationStatus } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
-import { GetJson, GetJsonSync, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache } from "../rest";
+import { GetJson, GetJsonSync } from "../rest";
+import { longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache } from "../rest.vars";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 import { GetListRestUrl } from "./list";
 import { SPVersionToVersionId } from "./listutils/common";

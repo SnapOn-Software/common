@@ -10,13 +10,14 @@ import { makeFullUrl, makeServerRelativeUrl, normalizeUrl } from "../../helpers/
 import { IDictionary } from "../../types/common.types";
 import { typeMonentJSTimeZone } from "../../types/moment";
 import { IRestOptions, jsonTypes } from "../../types/rest.types";
-import { IContextWebInformation, IFieldInfoEX, IFolderInfo, IRententionLabel, ISiteGroupInfo, IUserCustomActionInfo, IWebInfo, SPBasePermissionKind } from "../../types/sharepoint.types";
+import { IFieldInfoEX, IFolderInfo, IRententionLabel, ISiteGroupInfo, IUserCustomActionInfo, IWebInfo, SPBasePermissionKind } from "../../types/sharepoint.types";
 import { IAppTile, IGroupInfo, IRestRoleDefinition, IRootWebInfo, ISiteInfo, ITimeZone, IUserInfo, IWebBasicInfo, IWebRegionalSettings, WebTypes, iContentType, iList } from "../../types/sharepoint.utils.types";
 import { AutoDiscoverTenantInfo } from "../auth/discovery";
 import { ConsoleLogger } from "../consolelogger";
 import { toIsoDateFormat } from "../date";
 import { MomentTimezoneJSKnownScript } from "../knownscript";
-import { GetJson, GetJsonSync, extraLongLocalCache, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest";
+import { GetJson, GetJsonSync } from "../rest";
+import { extraLongLocalCache, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest.vars";
 import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl, GetSiteUrl, GetSiteUrlLocally, LIST_EXPAND, LIST_SELECT, WEB_SELECT, hasGlobalContext } from "./common";
 import { GetListFields, GetListFieldsSync, GetListRestUrl } from "./list";
 import { SPTimeZoneIdToIANATimeZoneName } from "./timzone-map";
@@ -1229,67 +1230,6 @@ export async function SPServerLocalToday(siteUrl: string) {
     }, 30000);
 }
 
-export function GetContextWebInformationSync(siteUrl: string): IContextWebInformation {
-    var siteId: string = null;
-    if (hasGlobalContext() && _spPageContextInfo && _spPageContextInfo.isAppWeb) {
-        //inside an app web you can't get the contextinfo for any other site
-        siteUrl = _spPageContextInfo.webServerRelativeUrl;
-        siteId = _spPageContextInfo.siteId;
-    } else {
-        siteId = GetSiteIdSync(siteUrl);
-
-        if (isNullOrEmptyString(siteId)) {
-            return null;
-        }
-    }
-
-    let result = GetJsonSync<{ d: { GetContextWebInformation: IContextWebInformation; }; }>(`${GetRestBaseUrl(siteUrl)}/contextinfo`, null, {
-        method: "POST",
-        maxAge: 5 * 60,
-        includeDigestInPost: false,
-        allowCache: true,
-        postCacheKey: `GetContextWebInformation_${normalizeGuid(siteId)}`,
-        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
-    });
-
-    if (result && result.success) {
-        return result.result.d.GetContextWebInformation;
-    } else {
-        return null;
-    }
-}
-
-export async function GetContextWebInformation(siteUrl: string): Promise<IContextWebInformation> {
-    var siteId: string = null;
-    if (hasGlobalContext() && _spPageContextInfo && _spPageContextInfo.isAppWeb) {
-        //inside an app web you can't get the contextinfo for any other site
-        siteUrl = _spPageContextInfo.webServerRelativeUrl;
-        siteId = _spPageContextInfo.siteId;
-    } else {
-        siteId = await GetSiteId(siteUrl);
-
-        if (isNullOrEmptyString(siteId)) {
-            return null;
-        }
-    }
-
-    try {
-        let result = await GetJson<{
-            d: { GetContextWebInformation: IContextWebInformation; };
-        }>(`${GetRestBaseUrl(siteUrl)}/contextinfo`, null, {
-            method: "POST",
-            maxAge: 5 * 60,
-            includeDigestInPost: false,
-            allowCache: true,
-            postCacheKey: `GetContextWebInformation_${normalizeGuid(siteId)}`,
-            spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
-        });
-        return result.d.GetContextWebInformation;
-    } catch {
-        return null;
-    }
-}
-
 function _getCustomActionsBaseRestUrl(siteUrl?: string, options: { listId?: string, actionId?: string } = {}) {
     const { listId, actionId } = { ...options };
 
@@ -1520,19 +1460,6 @@ export async function GetWebPropertyByName(name: string, siteUrl?: string) {
     } catch {
     }
     return null;
-}
-
-export function getFormDigest(serverRelativeWebUrl?: string, async?: true): Promise<string | null>
-export function getFormDigest(serverRelativeWebUrl?: string, async?: false): string | null
-export function getFormDigest(serverRelativeWebUrl?: string, async: boolean = false): string | null | Promise<string | null> {
-    if (async) {
-        return GetContextWebInformation(serverRelativeWebUrl).then(contextWebInformation => {
-            return contextWebInformation && contextWebInformation.FormDigestValue || null;
-        });
-    } else {
-        let contextWebInformation = GetContextWebInformationSync(serverRelativeWebUrl);
-        return contextWebInformation && contextWebInformation.FormDigestValue || null;
-    }
 }
 
 export interface spfxContext { legacyPageContext: typeof _spPageContextInfo }

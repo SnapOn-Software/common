@@ -7,5 +7,6 @@ export * from './emails';
 export * from './knownscript';
 export * from './localstoragecache';
 export * from './rest';
+export * from './rest.vars';
 export * from './script';
 export * from './sod';

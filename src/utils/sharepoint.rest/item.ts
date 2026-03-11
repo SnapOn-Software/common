@@ -9,7 +9,8 @@ import { DateTimeFieldFormatType, IAttachmentInfo, IFieldCurrencyInfo, IFieldDat
 import { IRestItem } from "../../types/sharepoint.utils.types";
 import { LocaleKnownScript } from "../../utils/knownscript";
 import { ConsoleLogger } from "../consolelogger";
-import { GetJson, GetJsonSync, shortLocalCache } from "../rest";
+import { GetJson, GetJsonSync } from "../rest";
+import { shortLocalCache } from "../rest.vars";
 import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate, hasGlobalContext } from "./common";
 import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./list";
 import { SPVersionToVersionId } from "./listutils/common";

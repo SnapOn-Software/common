@@ -3,6 +3,7 @@ export * from './libs/exports-index';
 export * from './ns/exports-index';
 export * from './auth';
 export * from './common.types';
+export * from './config.typs';
 export * from './flatted.types';
 export * from './globals.types';
 export * from './knownscript.types';

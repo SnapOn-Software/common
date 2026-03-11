@@ -10,7 +10,8 @@ import { IRestOptions, contentTypes, jsonTypes } from "../../types/rest.types";
 import { BaseTypes, FieldTypeAsString, FieldTypes, IFieldInfo, IFieldInfoEX, IFieldInfoExHash, IFieldJsonSchema, IFieldLookupInfo, ISPEventReceiver, ListTemplateTypes, PageType, SPBasePermissionKind } from "../../types/sharepoint.types";
 import { GeListItemsFoldersBehaviour, IListWorkflowAssociation, IRestItem, ListExperienceOptions, iContentType, iList, iListVersionSettings, iListView } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
-import { GetJson, GetJsonSync, longLocalCache, shortLocalCache } from "../rest";
+import { GetJson, GetJsonSync } from "../rest";
+import { longLocalCache, shortLocalCache } from "../rest.vars";
 import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, __getSPRestErrorData } from "./common";
 import { __fixGetListItemsResults } from "./listutils/common";
 import { GetContentTypes, GetContentTypesSync, GetListsSync, IGetContentTypesOptions } from "./web";
@@ -156,7 +157,7 @@ export function GetSiteAssetLibrary(siteUrl: string, sync?: boolean): IGetSiteAs
         //+ `$filter=isSiteAssetsLibrary eq true&$select=ID,RootFolder/Name,RootFolder/ServerRelativeUrl,RootFolder/Exists`
         + `$filter=EntityTypeName%20eq%20%27SiteAssets%27`
         + `&$select=${siteAssetLibrarySelectFields.join(",")}`
-        + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;    
+        + `&$expand=${siteAssetLibraryExpandFields.join(",")}`;
 
     let caller = sync ? GetJsonSync : GetJson;
 

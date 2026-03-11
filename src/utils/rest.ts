@@ -5,26 +5,11 @@ import { IDictionary } from "../types/common.types";
 import { AllRestCacheOptionsKeys, IJsonSyncResult, IRequestBody, IRequestObjects, IRestCacheOptions, IRestError, IRestOptions, IRestRequestOptions, jsonTypes } from "../types/rest.types";
 import { ConsoleLogger } from "./consolelogger";
 import { getCacheItem, setCacheItem } from "./localstoragecache";
-import { getFormDigest } from "./sharepoint.rest/web";
+import { getFormDigest } from "./sharepoint.rest/digest";
 
 var logger = ConsoleLogger.get("utils/rest");
 
 const supressDebugMessages = true;
-
-/** cache for 1 day */
-export const noLocalCache: IRestOptions = { allowCache: false };
-/** cache for 1 days */
-export const longLocalCache: IRestOptions = { allowCache: true, localStorageExpiration: { days: 1 } };
-/** cache for 2 days */
-export const extraLongLocalCache: IRestOptions = { allowCache: true, localStorageExpiration: { days: 2 } };
-/** cache for 7 days */
-export const weeekLongLocalCache: IRestOptions = { allowCache: true, localStorageExpiration: { days: 7 } };
-/** cache for 30 days */
-export const monthLongLocalCache: IRestOptions = { allowCache: true, localStorageExpiration: { days: 30 } };
-/** cache for 5 minutes */
-export const shortLocalCache: IRestOptions = { allowCache: true, localStorageExpiration: { minutes: 5 } };
-/** cache for 15 minutes */
-export const mediumLocalCache: IRestOptions = { allowCache: true, localStorageExpiration: { minutes: 15 } };
 
 interface IPendingRequest<T> {
     objects: IRequestObjects;

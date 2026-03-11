@@ -1,11 +1,11 @@
 import { firstOrNull } from "../../helpers/collections.base";
 import { promiseLock } from "../../helpers/promises";
 import { getUniqueId } from "../../helpers/random";
-import { isSPPageContextInfoReady, isSPPageContextInfoReadySync } from "../../helpers/sharepoint";
 import { isNullOrEmptyString, isNullOrUndefined, isNumber, isNumeric, isTypeofFullNameNullOrUndefined } from "../../helpers/typecheckers";
 import { makeFullUrl } from "../../helpers/url";
 import { ISPFxOAuthToken, SPFxAuthTokenType } from "../../types/auth";
 import { IRestOptions } from "../../types/rest.types";
+import { isSPPageContextInfoReady, isSPPageContextInfoReadySync } from "../../utils/sharepoint.rest/context";
 import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { GetJson, GetJsonSync } from "../rest";

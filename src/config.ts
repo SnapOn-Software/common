@@ -1,15 +1,6 @@
 import { configInfo, SetDependencies } from './_dependencies';
-import { releasetypes } from './types/common.types';
+import { iConfigParams } from './types/config.typs';
 import { ConsoleLogger, logMessageValue } from './utils/consolelogger';
-
-export interface iConfigInfo {
-    BuildNumber: string;
-    IsLocalDev: boolean;
-    IsFastRing: boolean;
-    IsProduction: boolean;
-    ReleaseStatus: releasetypes;
-    ProjectName: string;
-}
 
 /** @deprecated should only be used for 3rd party packages. main project must call config and mark it as sideEffects */
 export class CommonConfig {
@@ -102,12 +93,6 @@ export class CommonLogger {
 }
 
 var unconfigured = true;
-
-export interface iConfigParams {
-    BuildNumber: string;
-    ReleaseStatus: releasetypes;
-    ProjectName: string;
-};
 
 export function config(params: iConfigParams) {
     SetDependencies(params);

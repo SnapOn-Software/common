@@ -4,7 +4,8 @@ import { SPFxAuthTokenType } from "../../types/auth";
 import { IMeetingLocation, IMeetingLocationEntityType } from "../../types/location.types";
 import { jsonTypes } from "../../types/rest.types";
 import { GetSPFxClientAuthToken } from "../auth/common";
-import { GetJson, shortLocalCache } from "../rest";
+import { GetJson } from "../rest";
+import { shortLocalCache } from "../rest.vars";
 
 interface IMeetingLocationsQuery {
     QueryConstraint: {

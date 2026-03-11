@@ -9,7 +9,7 @@ import { FieldTypeAsString, IFieldInfoEX, IFieldTaxonomyInfo } from "../../types
 import { ISPRestError } from "../../types/sharepoint.utils.types";
 import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
-import { mediumLocalCache } from "../rest";
+import { mediumLocalCache } from "../rest.vars";
 import { GetWebIdSync, GetWebInfoSync } from "./web";
 
 const logger = ConsoleLogger.get("utils/sharepoint.rest/common");
