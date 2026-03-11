@@ -1,4 +1,5 @@
 export * from './graph/exports-index';
+export * from './ns/exports-index';
 export * from './scheduler/exports-index';
 export * from './Guid';
 export * from './base64';

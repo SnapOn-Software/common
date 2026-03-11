@@ -26,9 +26,9 @@ export const $AzureEnvironment = {
     China: 2,
     Germany: 3,
     USGovernment: 4,
-    USGovernmentHigh : 5,
-    USGovernmentDoD : 6,
-    Custom : 100
+    USGovernmentHigh: 5,
+    USGovernmentDoD: 6,
+    Custom: 100
 }
 
 // eslint-disable-next-line no-shadow
@@ -70,12 +70,12 @@ export enum SPFxAuthTokenType {
 // refresh_token_expires_in: 
 // scope: "profile openid email https://graph.microsoft.com/.default"
 // token_type: "Bearer"
-export interface ISPFxOAuthToken {    
+export interface ISPFxOAuthToken {
     access_token: string;
-    client_info?: string;   
+    client_info?: string;
     /** Number of seconds that have elapsed since January 1, 1970, 00:00:00 UTC */
     expires_on?: string | number;
-     /** Seconds until token expires */
+    /** Seconds until token expires */
     expires_in?: number;
     ext_expires_in?: number;
     id_token?: string;

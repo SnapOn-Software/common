@@ -1,5 +1,6 @@
 export * from './graph/exports-index';
 export * from './libs/exports-index';
+export * from './ns/exports-index';
 export * from './auth';
 export * from './common.types';
 export * from './flatted.types';
