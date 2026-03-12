@@ -3,9 +3,13 @@ import { ILocalStorageCacheLifetime } from "./localstoragecache.types";
 export type IRestResponseType = "" | "blob" | "arraybuffer" | "text" | "json" | "document";
 // eslint-disable-next-line no-shadow
 export enum jsonTypes {
-    verbose = "application/json; odata=verbose",
-    minimal = "application/json; odata=minimal",
-    nometadata = "application/json; odata=nometadata",
+    verbose = "application/json;odata=verbose",
+    minimal = "application/json;odata=minimal",
+    nometadata = "application/json;odata=nometadata",
+
+    minimalV4 = "application/json;odata.metadata=minimal",
+    noMetadataV4 = "application/json;odata.metadata=none",
+
     standard = "application/json"
 }
 
@@ -32,12 +36,26 @@ export interface IRestCacheOptions {
 }
 
 export interface IRestRequestOptions {
-    /** default: get if no body sent, otherwise post */
-    method?: "GET" | "POST";
+    /**
+     * Request method.
+     *
+     * SharePoint typically uses `GET` or `POST`.
+     * For SharePoint updates/deletes, use `POST` with `xHttpMethod`.
+     *
+     * Microsoft Graph uses the actual HTTP method directly.
+     */
+    method?: "GET" | "POST" | "MERGE" | "DELETE" | "PUT";
+
+    /**
+     * SharePoint-only method override.
+     * Used with `method: "POST"` for `MERGE`, `DELETE`, or `PUT`.
+     * Not used for Microsoft Graph.
+     */
     xHttpMethod?: "MERGE" | "DELETE" | "PUT";
-    /**default true */
+
+    /** default true */
     includeDigestInPost?: boolean;
-    /**default false */
+    /** default false */
     includeDigestInGet?: boolean;
     /**default: Accept: jsonTypes.verbose, and (in post only) content-type: jsonTypes.verbose */
     headers?: {
@@ -57,6 +75,8 @@ export interface IRestRequestOptions {
     spWebUrl?: string;
     jsonMetadata?: jsonTypes;
 }
+
+
 export interface IRestOptions extends IRestRequestOptions, IRestCacheOptions {
 }
 
