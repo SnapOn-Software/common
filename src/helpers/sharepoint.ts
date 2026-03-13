@@ -615,28 +615,34 @@ export enum PageContainerTypes {
     M365ListView
 }
 export function GetModernPageContainers() {
-    let mainContent: HTMLElement = document.querySelector("section.mainContent");
-    if (mainContent)
-        return { mainContent, commandBar: document.querySelector(".commandBarWrapper") as HTMLElement, type: PageContainerTypes.M365SPFx };
+    let mainContent: HTMLElement;
 
     if ("location" in globalThis
-        && globalThis.location.pathname.toLowerCase().indexOf("kwizform.aspx") !== -1) {
+        && globalThis.location?.pathname.toLowerCase().endsWith("kwizform.aspx")) {
         mainContent = document.querySelector(".Files-contentAreaFlexContainer");
-        if (mainContent) {
-            return { mainContent, commandBar: null, type: PageContainerTypes.M365ListView };
+        if (isElement(mainContent)) {
+            return {
+                mainContent,
+                commandBar: null,
+                type: PageContainerTypes.M365ListView
+            };
         }
     }
 
+    mainContent = document.querySelector("section.mainContent");
+    if (isElement(mainContent))
+        return { mainContent, commandBar: document.querySelector(".commandBarWrapper") as HTMLElement, type: PageContainerTypes.M365SPFx };
+
     mainContent = document.querySelector("div[class^=canvasWrapper]");//document.querySelector("div.SPCanvas");
-    if (mainContent)
+    if (isElement(mainContent))
         return { mainContent, commandBar: document.querySelector(".commandBarWrapper") as HTMLElement, type: PageContainerTypes.SP2019SPFx };
 
     mainContent = document.querySelector(".flex-mainColumn");
-    if (mainContent)
+    if (isElement(mainContent))
         return { mainContent, commandBar: null, type: PageContainerTypes.M365OOBListForm };
 
     mainContent = document.querySelector(".Files-mainColumn");
-    if (mainContent)
+    if (isElement(mainContent))
         return { mainContent, commandBar: null, type: PageContainerTypes.SP2019ListForm };
 
     return { mainContent: null, commandBar: null, type: PageContainerTypes.SP2019ListForm };
