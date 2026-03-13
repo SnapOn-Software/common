@@ -1,6 +1,7 @@
 import { tnsCountry } from "../../types/ns/ns.countries";
-import { insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.types";
-import { isNotEmptyString, isNullOrEmptyString } from "../typecheckers";
+import { insObject, insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.types";
+import { firstOrNull } from "../collections.base";
+import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString } from "../typecheckers";
 import { isnsSuiteTalkRestErrorData } from "./type-checkers";
 
 const nsEndpointHosts = {
@@ -32,8 +33,25 @@ export function nsGetErrorDetails(error: any) {
     return data;
 }
 
-export function nsFieldEditableFilter(field: tnsField) {
-    return isNotEmptyString(field.title);
+const ignoreSuffixIfDuplicate = ["WithHierarchy", "Copy", "Display"];
+export function nsFieldEditableFilter(field: tnsField, allFields?: string[]) {
+    if (isNullOrEmptyString(field.title)
+        || field.readOnly
+        || ['id', 'createdDate', 'lastModifiedDate', 'externalId', 'refName'].includes(field.name))
+        return false;
+    if (isNotEmptyArray(allFields)) {
+        const ending = firstOrNull(ignoreSuffixIfDuplicate, suffix => field.name.endsWith(suffix));
+        if (isNotEmptyString(ending) && allFields.includes(field.name.slice(0, -1 * ending.length)))//got the field without the ending
+            return false;
+    }
+    return true;
+}
+
+export function nsObjectFilter(obj: insObject) {
+    return isNotEmptyString(obj.name);
+}
+export function nsIsFeaturedObject(obj: insObject) {
+    return false;
 }
 
 export function NSCountryToText(country: tnsCountry): string {
