@@ -30,6 +30,7 @@
         "build-explain": "tsc --explainFiles",
         "check-dependencies": "npx dpdm --no-tree --no-warning ./src/index.ts",
         "yalc-link": "yalc publish",
+        "npm-link": "npm link",
         "unit-test": "node --import tsx --test src",
         "test": "npm run build:cjs && npm run build:test && mocha",
         "npm-v-patch": "npm version patch && git push origin main:main && git push --tags",
