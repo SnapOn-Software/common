@@ -25,6 +25,7 @@ export * from './json';
 export * from './location';
 export * from './md5';
 export * from './objects';
+export * from './polyfill';
 export * from './promises';
 export * from './random';
 export * from './sharepoint';

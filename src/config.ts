@@ -1,4 +1,5 @@
 import { configInfo, SetDependencies } from './_dependencies';
+import { SetPolyfills } from './helpers/polyfill';
 import { iConfigParams } from './types/config.typs';
 import { ConsoleLogger, logMessageValue } from './utils/consolelogger';
 
@@ -95,6 +96,7 @@ export class CommonLogger {
 var unconfigured = true;
 
 export function config(params: iConfigParams) {
+    SetPolyfills();
     SetDependencies(params);
     unconfigured = false;
     const GetLogger = (name: string) => {
