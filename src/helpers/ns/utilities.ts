@@ -1,5 +1,5 @@
 import { tnsCountry } from "../../types/ns/ns.countries";
-import { insObject, insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.types";
+import { insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.types";
 import { firstOrNull } from "../collections.base";
 import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString } from "../typecheckers";
 import { isnsSuiteTalkRestErrorData } from "./type-checkers";
@@ -56,10 +56,10 @@ export function nsFieldEditableFilter(field: tnsField, allFields?: string[]) {
     return true;
 }
 
-export function nsObjectFilter(obj: insObject) {
-    return isNotEmptyString(obj.name);
+export function nsObjectFilter(obj: string) {
+    return isNotEmptyString(obj);
 }
-export function nsIsFeaturedObject(obj: insObject) {
+export function nsIsFeaturedObject(obj: string) {
     return false;
 }
 
