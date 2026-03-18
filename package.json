@@ -1,6 +1,6 @@
 {
     "name": "@kwiz/common",
-    "version": "1.0.217",
+    "version": "1.0.218",
     "description": "KWIZ common utilities and helpers for M365 platform",
     "main": "lib/cjs/index.js",
     "module": "lib/esm/index.js",
@@ -26,7 +26,6 @@
         "npm-v-patch": "npm version patch && git push origin main:main && git push --tags",
         "npm-v-major": "npm version major && git push origin main:main && git push --tags",
         "clear-npm-cache": "npm cache clean --force",
-
         "build-explain": "tsc --explainFiles",
         "check-dependencies": "npx dpdm --no-tree --no-warning ./src/index.ts",
         "yalc-link": "yalc publish",
