@@ -336,3 +336,36 @@ export function splitString(str: string, options: { maxLength?: number; marker?:
         strArr = filterEmptyEntries(strArr);
     return strArr;
 }
+
+/**
+ * Converts a camelCase, snake_case or PascalCase string into a Title Case string.
+ * @param text - The camelCase string (e.g., "acctType")
+ * @param capitalizeAll - If true, "Acct Type". If false, "Acct type".
+ */
+export function codeNameToTitle(text: string, capitalizeAll?: boolean): string {
+    if (!text) return "";
+
+    const words = text
+        // 1. Handle camelCase: Insert space before capitals
+        .replace(/([A-Z])/g, " $1")
+        // 2. Handle snake_case: Replace underscores with spaces
+        .replace(/_/g, " ")
+        // 3. Clean up: Trim and split into words
+        .trim()
+        .split(/\s+/);
+
+    return words
+        .map((word, index) => {
+            const lowerWord = word.toLowerCase();
+            // Capitalize first word ALWAYS, capitalize others only if capitalizeAll is true
+            if (index === 0 || capitalizeAll) {
+                return lowerWord.charAt(0).toUpperCase() + lowerWord.slice(1);
+            }
+            return lowerWord;
+        })
+        .join(" ");
+};
+/** @deprecated use codeNameToTitle - keep here for intellisense*/
+export const formatSnakeToTitle = codeNameToTitle;
+/** @deprecated use codeNameToTitle - keep here for intellisense*/
+export const formatCamelToTitle = codeNameToTitle;

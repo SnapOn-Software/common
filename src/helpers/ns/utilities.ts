@@ -13,14 +13,23 @@ const nsEndpointHosts = {
 export function getNSAccuntUrlPrefix(accountId: string) {
     return accountId.replace('_', '-').toLowerCase();
 }
-export function getNSSuitetalkApiHost(accountId: string) {
-    return `https://${getNSAccuntUrlPrefix(accountId)}${nsEndpointHosts.suitetalk}`;
+export function getNsHost(accountId: string, host: keyof typeof nsEndpointHosts) {
+    return `https://${getNSAccuntUrlPrefix(accountId)}${nsEndpointHosts[host]}`;
 }
-export function getNSRestletsApiHost(accountId: string) {
-    return `https://${getNSAccuntUrlPrefix(accountId)}${nsEndpointHosts.restlets}`;
-}
-export function getNSIUHost(accountId: string) {
-    return `https://${getNSAccuntUrlPrefix(accountId)}${nsEndpointHosts.ui}`;
+export function getBundlePage(info: {
+    /** bundle id */
+    id: string;
+    /** bundle org id */
+    orgId: string;
+    /** customer's account id */
+    accountId: string;
+    /** page type */
+    type: "install" | "update";
+}) {
+    if (info.type === "update")
+        return `${getNsHost(info.accountId, "ui")}/app/bundler/previewbundleupdate.nl?fromcompid=${info.orgId}&domain=PRODUCTION&id=${info.id}`;
+    else
+        return `${getNsHost(info.accountId, "ui")}/app/bundler/bundledetails.nl?sourcecompanyid=${info.orgId}&domain=PRODUCTION&config=F&id=${info.id}`;
 }
 
 /** send in either an AxiosError that has a response.data object, or just the data object itself. */
