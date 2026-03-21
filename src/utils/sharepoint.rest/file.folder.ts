@@ -555,11 +555,21 @@ export async function GetFolder(siteUrl: string, folderUrl: string, options: { a
 export async function GetFileItemId(siteUrl: string, fileServerRelativeUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
     const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/ListItemAllFields/id`;
-    const result = await GetJson<{ value: number; }>(restUrl, null, {
+    const result = await GetJson<{ value: number; }>(restUrl, null, {        
         jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
     return result.value;
+}
+
+export function GetFileItemIdSync(siteUrl: string, fileServerRelativeUrl: string) {
+    siteUrl = GetSiteUrl(siteUrl);
+    const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/ListItemAllFields/id`;
+    const result = GetJsonSync<{ value: number; }>(restUrl, null, {        
+        jsonMetadata: jsonTypes.nometadata,
+        spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
+    });
+    return result?.result.value;
 }
 
 export async function GetFileModerationStatus(siteUrl: string, fileServerRelativeUrl: string) {
