@@ -1,3 +1,4 @@
+import { normalizeUrl } from "../../exports-index";
 import { promiseOnce } from "../../helpers/promises";
 import { normalizeGuid } from "../../helpers/strings";
 import { isNullOrEmptyString, isNullOrUndefined, isValidGuid } from "../../helpers/typecheckers";
@@ -142,7 +143,7 @@ function _getTenantInfoFromContext() {
     return {
         environment: environment,
         idOrName: normalizeGuid(_spPageContextInfo.aadTenantId),
-        authorityUrl: _spPageContextInfo["aadInstanceUrl"],
+        authorityUrl: `${normalizeUrl(_spPageContextInfo["aadInstanceUrl"])}/${_spPageContextInfo.aadTenantId}`,
         msGraphHost: new URL(_spPageContextInfo["msGraphEndpointUrl"]).host
     } as ITenantInfo;
 }

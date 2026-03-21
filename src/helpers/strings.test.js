@@ -1,6 +1,6 @@
 import assert from 'assert/strict';
 import test from 'node:test';
-import { ReplaceTokensInDictionary, capitalizeFirstLetter, escapeXml, maskString, replaceAll, replaceRegex, splitString } from './strings';
+import { ReplaceTokensInDictionary, capitalizeFirstLetter, codeNameToTitle, escapeXml, maskString, replaceAll, replaceRegex, splitString } from './strings';
 
 test('replaceAll', t => {
     assert.strictEqual(replaceAll("hello old#@! world old#@! !", "old#@!", "new!@$"), "hello new!@$ world new!@$ !");
@@ -120,4 +120,16 @@ test('splitString', async t => {
         'ef', 'gh', '56', '78'
     ];
     assert.strictEqual(JSON.stringify(splitString(str, { marker: "|", maxLength: 2 })), JSON.stringify(expected));
+});
+
+
+test('codeNameToTitle', async t => {
+    assert.strictEqual(codeNameToTitle("acctType"), "Acct type");
+    assert.strictEqual(codeNameToTitle("acct_type", true), "Acct Type");
+
+    assert.strictEqual(codeNameToTitle("acct"), "Acct");
+    assert.strictEqual(codeNameToTitle("acct", true), "Acct");
+
+    assert.strictEqual(codeNameToTitle("ABC"), "A b c");
+    assert.strictEqual(codeNameToTitle("ABC", true), "A B C");
 });
