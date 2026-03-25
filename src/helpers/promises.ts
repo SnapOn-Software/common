@@ -201,3 +201,13 @@ function _deletePromiseByKey(key: string) {
         }
     }
 }
+
+/** instead of wrapping your function in a try catch - return catchValue if the promise errors out */
+export async function promiseCatch<T>(promise: () => Promise<T>, catchValue?: T) {
+    try {
+        return await promise();
+    }
+    catch (e) {
+        return catchValue;
+    }
+}
