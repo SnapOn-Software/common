@@ -6,7 +6,7 @@ function _getGlobal() {
     let _global = getGlobal<{ promises: IDictionary<Promise<any>> }>("helpers_promises",
         {
             promises: {}
-        });
+        }, true);
     return _global;
 }
 

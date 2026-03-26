@@ -1225,9 +1225,9 @@ export async function SPServerLocalTime(siteUrl: string) {
 export async function SPServerLocalToday(siteUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
 
-    return promiseLock(`SPServerLocalToday)_${siteUrl}`, async () => {
+    return promiseLock(`SPServerLocalToday_${siteUrl}`, async () => {
         return SPServerLocalTime(siteUrl);
-    }, 30000);
+    }, 5000);
 }
 
 function _getCustomActionsBaseRestUrl(siteUrl?: string, options: { listId?: string, actionId?: string } = {}) {
