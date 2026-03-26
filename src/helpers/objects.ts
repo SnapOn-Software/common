@@ -145,20 +145,28 @@ export function objectsEqual<T extends object>(o1: T, o2: T, ignoreKeys?: string
     return true;
 }
 export function jsonClone<T>(obj: T): T {
-    //todo: check if assign utility method is faster
+    //cloneDatesOnObjectRecursivily is a browser performance killer... avoid if possible
+
     if (isNullOrUndefined(obj)) return null;
     let result = obj;
-    try { result = jsonParse<T>(JSON.stringify(obj)); }
-    catch (e) {
-        if (isNotEmptyArray(obj))
-            result = (obj as any).slice();
-        else
-            result = obj;
-    }
 
-    //clone date objects
-    try { cloneDatesOnObjectRecursivily(obj, result); } catch (e) { }
-    return result;
+    try {
+        //if exists and worked - this handles dates correctly too
+        return structuredClone(obj);
+    } catch (e) {
+        // Fallback for older environments or non-serializable objects
+        try { result = jsonParse<T>(JSON.stringify(obj)); }
+        catch (e) {
+            if (isNotEmptyArray(obj))
+                result = (obj as any).slice();
+            else
+                result = obj;
+        }
+
+        //clone date objects
+        try { cloneDatesOnObjectRecursivily(obj, result); } catch (e) { }
+        return result;
+    }
 }
 
 function cloneDatesOnObjectRecursivily(obj1, obj2) {
