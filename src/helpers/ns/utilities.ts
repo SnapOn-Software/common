@@ -190,7 +190,7 @@ export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields:
             type: bodyField.type,
             defaultValue: bodyField.defaultValue,
             options: bodyField.options,
-            required: restField.nullable === false || bodyField.isMandatory === true,
+            required: bodyField.isMandatory === true || restField?.nullable === false,
             readOnly
         };
     });
