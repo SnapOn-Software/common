@@ -174,13 +174,8 @@ export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields:
         const restField = restFieldsLower[bodyField.id];
         if (restField) {
             delete restFieldsLower[bodyField.id];//remove it from extra fields loop
-            if (restField.readOnly)
-                console.log(`${restField.title} is read only`);
-            if ((restField.nullable === true && bodyField.isMandatory) || (restField.nullable === false && !bodyField.isMandatory))
-                console.log(`${restField.title} required mismatch`);
         }
-        let readOnly = tnsrFieldEditableCheck(bodyField);
-        if (!readOnly && restField) readOnly = nsFieldEditableCheck(restField, allRestFields);
+        let readOnly = !tnsrFieldEditableCheck(bodyField);
         expandedFields[bodyField.id] = {
             restId: restField?.name,
             restType: restField?.type,
@@ -190,7 +185,7 @@ export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields:
             type: bodyField.type,
             defaultValue: bodyField.defaultValue,
             options: bodyField.options,
-            required: bodyField.isMandatory === true || restField?.nullable === false,
+            required: bodyField.isMandatory === true,
             readOnly
         };
     });
@@ -220,7 +215,8 @@ export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields:
                                     ? "integer"
                                     : "text",
                     restId: restField.name,
-                    restType: restField.type
+                    restType: restField.type,
+                    readOnly: !nsFieldEditableCheck(restField, allRestFields)
                 };
                 break;
         }
