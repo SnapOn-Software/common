@@ -1,5 +1,6 @@
-import { nsCountriesByCode, tnsCountryCode, tnsFieldTypes } from "../../exports-index";
+import { IDictionary, nsCountriesByCode, nsReadOnlyFieldTypes, nsReadOnlyFieldTypesForSublist, tnsCountryCode, tnsFieldTypes, tnsrFieldInfo } from "../../exports-index";
 import { nsCountriesByEnum, tnsCountryEnum } from "../../types/ns/ns.countries.restlet";
+import { nsFieldEX } from "../../types/ns/ns.fieldex.types";
 import { insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.rest.types";
 import { firstOrNull } from "../collections.base";
 import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString } from "../typecheckers";
@@ -105,7 +106,6 @@ export function TextToNSCountry(country: string): ({ code: tnsCountryCode, enum:
     }
 }
 
-
 export function nsFormatDate(date: Date, fieldType: tnsFieldTypes): string {
     if (!date || isNaN(date.getTime())) return "";
 
@@ -142,4 +142,87 @@ export function nsFormatDate(date: Date, fieldType: tnsFieldTypes): string {
         default:
             return date.toISOString();
     }
+}
+
+const ghostFieldPrefixes = ['_', 'nsapi'];
+const systemReadOnlyFields = [
+    //body fields
+    'id', 'internalid', 'createddate', 'lastmodifieddate',
+    'owner', 'status', 'total', 'subtotal', 'tranid',
+    'wfinstances', 'entryformquerystring',
+    //sublist fields
+    'line', 'linenumber', 'quantityonhand', 'quantityavailable', 'taxrate'
+];
+function tnsrFieldEditableFilter(field: tnsrFieldInfo, info: { inSubList?: boolean; } = {}) {
+    return field.isVisible !== false && !systemReadOnlyFields.includes(field.id.toLowerCase())
+        && !(info.inSubList ? nsReadOnlyFieldTypesForSublist : nsReadOnlyFieldTypes).includes(field.type as any)
+        //also remove system / ghost fields by prefix
+        && !ghostFieldPrefixes.some(pre => field.id.startsWith(pre));
+}
+
+/** get the REST api fields, and restlet api fields and return a full field exanded info */
+export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields: {
+    bodyFields: tnsrFieldInfo[];
+    sublists?: IDictionary<tnsrFieldInfo[]>;
+}) {
+    const expandedFields: IDictionary<nsFieldEX> = {};
+
+    const restFieldsLower: IDictionary<tnsField> = {};
+    Object.keys(restFields).map(f => restFieldsLower[f.toLowerCase()] = restFields[f]);
+    restletFields.bodyFields.forEach(bodyField => {
+        const restField = restFieldsLower[bodyField.id];
+        if (restField) {
+            delete restFieldsLower[bodyField.id];//remove it from extra fields loop
+            if (restField.readOnly)
+                console.log(`${restField.title} is read only`);
+            if ((restField.nullable === true && bodyField.isMandatory) || (restField.nullable === false && !bodyField.isMandatory))
+                console.log(`${restField.title} required mismatch`);
+        }
+        const readOnly = tnsrFieldEditableFilter(bodyField);
+        expandedFields[bodyField.id] = {
+            restId: restField?.name,
+            restType: restField?.type,
+            description: restField?.description,
+            id: bodyField.id,
+            label: bodyField.label || restField?.title || bodyField.id,
+            type: bodyField.type,
+            defaultValue: bodyField.defaultValue,
+            options: bodyField.options,
+            required: restField.nullable === false || bodyField.isMandatory === true,
+            readOnly
+        };
+    });
+    if (restletFields.sublists)
+        Object.keys(restletFields.sublists).forEach(sublist => {
+            delete restFieldsLower[sublist];//sublists will show up as rest fields
+        });
+    Object.keys(restFieldsLower).forEach(f => {
+        const restField = restFieldsLower[f];
+        switch (restField.type) {
+            case "string":
+            case "number":
+            case "boolean":
+            case "integer":
+                expandedFields[f] = {
+                    id: f,
+                    required: restField.nullable !== true,
+                    label: restField.title,
+                    description: restField.description,
+                    type: restField.type === "string"
+                        ? "text"
+                        : restField.type === "boolean"
+                            ? "checkbox"
+                            : restField.type === "number"
+                                ? restField.format === "double" ? "currency" : restField.format === "float" ? "float" : "integer"
+                                : restField.type === "integer"
+                                    ? "integer"
+                                    : "text",
+                    restId: restField.name,
+                    restType: restField.type
+                };
+                break;
+        }
+    });
+
+    return expandedFields;
 }
