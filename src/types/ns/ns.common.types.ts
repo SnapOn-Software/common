@@ -1,7 +1,8 @@
-export const nsReadOnlyFieldTypes = ["address", "inlinehtml",
+export const nsReadOnlyFieldTypesForSublist = ["inlinehtml",
     //found on customer
     "label", "help",
 ] as const;
+export const nsReadOnlyFieldTypes = [...nsReadOnlyFieldTypesForSublist, "address"] as const;
 export const nsFieldTypes = ["date", "datetime", "textarea", "richtext", "checkbox", "currency", "float", "integer",
     "text", "percent", "email", "phone", "url", "image",
     "select", "multiselect",

@@ -1,4 +1,4 @@
-import { nsReadOnlyFieldTypes, tnsFieldTypes } from "./ns.common.types";
+import { nsReadOnlyFieldTypes, nsReadOnlyFieldTypesForSublist, tnsFieldTypes } from "./ns.common.types";
 
 export type tnsrFieldValueTypes = string | boolean | number | Date | string[] | number[];
 
@@ -25,9 +25,9 @@ const systemReadOnlyFields = [
     'line', 'linenumber', 'quantityonhand', 'quantityavailable', 'taxrate'
 ];
 
-export function tnsrFieldEditableFilter(field: tnsrFieldInfo) {
+export function tnsrFieldEditableFilter(field: tnsrFieldInfo, info: { inSubList?: boolean; } = {}) {
     return field.isVisible !== false && !systemReadOnlyFields.includes(field.id.toLowerCase())
-        && !nsReadOnlyFieldTypes.includes(field.type as any)
+        && !(info.inSubList ? nsReadOnlyFieldTypesForSublist : nsReadOnlyFieldTypes).includes(field.type as any)
         //also remove system / ghost fields by prefix
         && !ghostFieldPrefixes.some(pre => field.id.startsWith(pre));
 }
