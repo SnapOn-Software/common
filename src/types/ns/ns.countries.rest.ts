@@ -1,7 +1,7 @@
 import { IDictionary } from "../common.types";
 
 /** used in REST API */
-export const nsCountiesByCode = {
+export const nsCountriesByCode = {
     AF: { enum: '_afghanistan', title: "Afghanistan" },
     AX: { enum: '_alandIslands', title: "Åland Islands" },
     AL: { enum: '_albania', title: "Albania" },
@@ -255,4 +255,4 @@ export const nsCountiesByCode = {
     ZM: { enum: '_zambia', title: "Zambia" },
     ZW: { enum: '_zimbabwe', title: "Zimbabwe" }
 } as const satisfies IDictionary<{ enum: string; title: string; }>;
-export type tnsCountryCode = keyof typeof nsCountiesByCode;
+export type tnsCountryCode = keyof typeof nsCountriesByCode;

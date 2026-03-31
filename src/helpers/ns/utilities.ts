@@ -1,4 +1,4 @@
-import { nsCountiesByCode, tnsCountryCode, tnsFieldTypes } from "../../exports-index";
+import { nsCountriesByCode, tnsCountryCode, tnsFieldTypes } from "../../exports-index";
 import { nsCountriesByEnum, tnsCountryEnum } from "../../types/ns/ns.countries.restlet";
 import { insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.rest.types";
 import { firstOrNull } from "../collections.base";
@@ -66,7 +66,7 @@ export function nsIsFeaturedObject(obj: string) {
 
 /** returns the title of the country or empty string if none found */
 export function NSCountryToText(country: tnsCountryCode | tnsCountryEnum): string {
-    return nsCountiesByCode[country as tnsCountryCode]?.title
+    return nsCountriesByCode[country as tnsCountryCode]?.title
         || nsCountriesByEnum[country as tnsCountryEnum]?.title
         || "";
 }
@@ -77,31 +77,31 @@ export function TextToNSCountry(country: string): ({ code: tnsCountryCode, enum:
 
     let lowerWords = country.toLowerCase().split(" ");
     //try to find the best match, until we are left with one option
-    let allOptions = Object.keys(nsCountiesByCode) as tnsCountryCode[];
+    let allOptions = Object.keys(nsCountriesByCode) as tnsCountryCode[];
     let validOptions: tnsCountryCode[] = allOptions;
 
     for (let i = 0; i < lowerWords.length && validOptions.length > 1; i++) {
         let word = lowerWords[i];
-        let newOptions = validOptions.filter(o => nsCountiesByCode[o].title.toLowerCase().split(' ').includes(word));
+        let newOptions = validOptions.filter(o => nsCountriesByCode[o].title.toLowerCase().split(' ').includes(word));
         if (newOptions.length > 0)//not empty - use this list
             validOptions = newOptions;
     }
 
     //done my loop. if I have more than 1 option - pick the best one.
     if (validOptions.length === 0 || validOptions.length === allOptions.length) return null;//none found
-    else if (validOptions.length === 1) return { code: validOptions[0], enum: nsCountiesByCode[validOptions[0]].enum };
+    else if (validOptions.length === 1) return { code: validOptions[0], enum: nsCountriesByCode[validOptions[0]].enum };
     else {
         //if user typed "atlantis" and we have "republic of atlantis" and "atlantis", he would get "atlantis" unless he mentiones "republic" as well
         let option = validOptions[0];
-        let optionTitleSplit = nsCountiesByCode[option].title.split(' ');
+        let optionTitleSplit = nsCountriesByCode[option].title.split(' ');
         validOptions.forEach(o => {
-            const oTitleSplit = nsCountiesByCode[o].title.split(' ');
+            const oTitleSplit = nsCountriesByCode[o].title.split(' ');
             if (oTitleSplit.length < optionTitleSplit.length) {
                 option = o;
                 optionTitleSplit = oTitleSplit;
             }
         });
-        return { code: option, enum: nsCountiesByCode[option].enum };
+        return { code: option, enum: nsCountriesByCode[option].enum };
     }
 }
 
