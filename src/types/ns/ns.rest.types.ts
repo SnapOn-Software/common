@@ -95,8 +95,6 @@ export interface insObject extends insSuiteTalkRecordResponseBase {
 }
 
 interface insFieldBase {
-    /** not included in the API return type, but we add it */
-    name: string;
     title: string;
     description?: string;
     readOnly?: boolean;

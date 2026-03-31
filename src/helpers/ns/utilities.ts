@@ -45,7 +45,7 @@ export function nsGetErrorDetails(error: any) {
 }
 
 const ignoreSuffixIfDuplicate = ["WithHierarchy", "Copy", "Display"];
-export function nsFieldEditableFilter(field: tnsField, allFields?: string[]) {
+function nsFieldEditableCheck(field: tnsField & { name: string }, allFields: string[]) {
     if (isNullOrEmptyString(field.title)
         || field.readOnly
         || ['id', 'createdDate', 'lastModifiedDate', 'externalId', 'refName'].includes(field.name))
@@ -153,7 +153,7 @@ const systemReadOnlyFields = [
     //sublist fields
     'line', 'linenumber', 'quantityonhand', 'quantityavailable', 'taxrate'
 ];
-function tnsrFieldEditableFilter(field: tnsrFieldInfo, info: { inSubList?: boolean; } = {}) {
+function tnsrFieldEditableCheck(field: tnsrFieldInfo, info: { inSubList?: boolean; } = {}) {
     return field.isVisible !== false && !systemReadOnlyFields.includes(field.id.toLowerCase())
         && !(info.inSubList ? nsReadOnlyFieldTypesForSublist : nsReadOnlyFieldTypes).includes(field.type as any)
         //also remove system / ghost fields by prefix
@@ -167,8 +167,9 @@ export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields:
 }) {
     const expandedFields: IDictionary<nsFieldEX> = {};
 
-    const restFieldsLower: IDictionary<tnsField> = {};
-    Object.keys(restFields).map(f => restFieldsLower[f.toLowerCase()] = restFields[f]);
+    const restFieldsLower: IDictionary<tnsField & { name: string; }> = {};
+    const allRestFields = Object.keys(restFields);
+    allRestFields.map(f => restFieldsLower[f.toLowerCase()] = { ...restFields[f], name: f });
     restletFields.bodyFields.forEach(bodyField => {
         const restField = restFieldsLower[bodyField.id];
         if (restField) {
@@ -178,7 +179,8 @@ export function nsExpandFields(restFields: IDictionary<tnsField>, restletFields:
             if ((restField.nullable === true && bodyField.isMandatory) || (restField.nullable === false && !bodyField.isMandatory))
                 console.log(`${restField.title} required mismatch`);
         }
-        const readOnly = tnsrFieldEditableFilter(bodyField);
+        let readOnly = tnsrFieldEditableCheck(bodyField);
+        if (!readOnly && restField) readOnly = nsFieldEditableCheck(restField, allRestFields);
         expandedFields[bodyField.id] = {
             restId: restField?.name,
             restType: restField?.type,
