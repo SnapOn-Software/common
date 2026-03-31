@@ -2,15 +2,6 @@ import { makeUniqueArray } from "./collections.base";
 import { jsonParse } from "./json";
 import { isDate, isFunction, isNotEmptyArray, isNullOrEmptyString, isNullOrUndefined, isObject, isPrimitiveValue, isString, primitiveTypes } from "./typecheckers";
 
-/** global window, safe for testing and environments without a browser */
-export var $w = typeof window === "undefined" ? {
-    setTimeout: setTimeout,
-    clearTimeout: clearTimeout,
-    location: {
-        href: "", host: ""
-    }
-} as any as Window : window;
-
 /** wrapper for hasOwnProperty that satisfies https://eslint.org/docs/latest/rules/no-prototype-builtins */
 export function hasOwnProperty(obj: any, prop: string) {
     if (!isNullOrUndefined(obj)) {
@@ -30,12 +21,12 @@ export var noops = () => { };
 export function getKWizComGlobal(allowFromTop?: boolean) {
     if (allowFromTop) {
         try {
-            $w.top["kwizcom"] = $w.top["kwizcom"] || {};
-            return $w.top["kwizcom"] as IKWizComGlobals;
+            globalThis.top["kwizcom"] = globalThis.top["kwizcom"] || {};
+            return globalThis.top["kwizcom"] as IKWizComGlobals;
         } catch (ex) { }
     }
-    $w["kwizcom"] = $w["kwizcom"] || {};
-    return $w["kwizcom"] as IKWizComGlobals;
+    globalThis["kwizcom"] = globalThis["kwizcom"] || {};
+    return globalThis["kwizcom"] as IKWizComGlobals;
 }
 /** get or create kwizcom.globals dictionary from top window or current window. Add or return key:name initialize as defaults or blank object if does not already exist */
 export function getGlobal<T>(name: string, defaults?: T, notFromTop?: boolean) {
@@ -190,7 +181,7 @@ function cloneDatesOnObjectRecursivily(obj1, obj2) {
 }
 
 /** if an object in this path doesnt exist under parent - creates it.*/
-export function ensureObjectPath(objectPath: string, defaultValue: any = {}, parent: any = $w) {
+export function ensureObjectPath(objectPath: string, defaultValue: any = {}, parent: any = globalThis) {
     if (isNullOrEmptyString(objectPath)) return;
     let parts = objectPath.split('.');
     for (let i = 0; i < parts.length; i++) {

@@ -1,3 +1,5 @@
+import { tnsCountryCode } from "./ns.countries.rest";
+
 export interface insSuiteTalkRestErrorData {
     "o:errorDetails": {
         detail: string;
@@ -128,4 +130,13 @@ export type tnsField = insFieldBase & {
     };
 };
 
-export type tnsFieldValueTypes = string | boolean | number;
+export type tnsAddressFieldValueType = {
+    addr1: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: tnsCountryCode;
+};
+export type tnsOptionValue = { id: string };
+export type tnsOptionValues = { items: tnsOptionValue[]; };
+export type tnsFieldValueTypes = string | boolean | number | Date | tnsOptionValue | tnsOptionValues | tnsAddressFieldValueType;

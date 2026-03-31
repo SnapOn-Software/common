@@ -6,7 +6,6 @@
     "module": "lib/esm/index.js",
     "types": "lib/types/index.d.ts",
     "sideEffects": [
-        "*.scss*",
         "lib/esm/helpers/debug.js",
         "lib/esm/config.js"
     ],

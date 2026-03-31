@@ -1,5 +1,5 @@
 import { insAccessToken, insTokenInfo, tnsContext, tnsRecordContext } from "../../types/ns/ns.ctx.types";
-import { insSuiteTalkRestErrorData } from "../../types/ns/ns.types";
+import { insSuiteTalkRestErrorData } from "../../types/ns/ns.rest.types";
 import { isNotEmptyArray, isNotEmptyString, isNumber } from "../typecheckers";
 
 export function isnsSuiteTalkRestErrorData(error: unknown): error is insSuiteTalkRestErrorData {

@@ -11,9 +11,9 @@
     "lib": [
       "es2019",
       "DOM",
-      "ES2021.Intl"      
+      "ES2021.Intl"
     ]
-  }, 
+  },
   "include": [
     "./src"
   ],
