@@ -964,7 +964,47 @@ export function GetListContentTypesSync(siteUrl: string, listIdOrTitle: string,
     return GetContentTypesSync(siteUrl, { ...(options || {}), listIdOrTitle: listIdOrTitle }, refreshCache);
 }
 
-/** generic version. for the KWIZ forms version that supports action id call GetListFormUrlAppsWeb instead */
+/**
+ * Builds a SharePoint list form URL (listform.aspx) for a given site, list, and form type.
+ *
+ * This method generates a fully qualified URL to the SharePoint list form endpoint:
+ * `/_layouts/15/listform.aspx`, including required and optional query parameters.
+ *
+ * @param siteUrl - The absolute or relative URL of the SharePoint site.
+ *                  This will be normalized using GetSiteUrl and normalizeUrl.
+ *
+ * @param listId - The GUID of the target list.
+ *                 Must be a valid GUID. If invalid, an error is logged.
+ *
+ * @param pageType - The type of form to open (e.g. DisplayForm, EditForm, NewForm).
+ *
+ * @param params - Optional parameters to further configure the form:
+ *  - contentTypeId: Forces the form to use a specific content type.
+ *  - itemId: The ID of the list item (required for Display/Edit forms).
+ *  - rootFolder: The server-relative folder path (useful for document libraries).
+ *
+ * @returns A fully constructed and encoded SharePoint list form URL.
+ *
+ * @remarks
+ * - All query parameter values are URL encoded using encodeURIComponent.
+ * - Optional parameters are only included if they are not null/empty.
+ * - Uses the classic SharePoint form endpoint (`listform.aspx`).
+ *
+ * @example
+ * // New item form
+ * GetListFormUrl(siteUrl, listId, PageType.NewForm);
+ *
+ * @example
+ * // Edit form for a specific item
+ * GetListFormUrl(siteUrl, listId, PageType.EditForm, { itemId: 42 });
+ *
+ * @example
+ * // New form with content type and folder
+ * GetListFormUrl(siteUrl, listId, PageType.NewForm, {
+ *   contentTypeId: "0x010100...",
+ *   rootFolder: "/sites/demo/Shared Documents/SubFolder"
+ * });
+ */
 export function GetListFormUrl(siteUrl: string, listId: string, pageType: PageType, params?: { contentTypeId?: string; itemId?: number | string; rootFolder?: string }) {
     siteUrl = GetSiteUrl(siteUrl);
 
