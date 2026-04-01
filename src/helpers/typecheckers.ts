@@ -197,15 +197,16 @@ export function isPrimitiveValue(obj: any): obj is primitiveTypes {
 }
 
 export function isValidGuid(str: string) {
-    if(isNullOrEmptyString(str)){
+    if (isNullOrEmptyString(str)) {
         return false;
     }
     let a = new RegExp("^[{|\\(]?[0-9a-fA-F]{8}[-]?([0-9a-fA-F]{4}[-]?){3}[0-9a-fA-F]{12}[\\)|}]?$");
     return !!a.exec(str);
 }
 
-export var BoolTrueStrings = ["true", "1", "on", "yes"];
-export var BoolFalseStrings = ["false", "0", "off", "no"];
+//netsuite uses T or F for boolean strings
+export var BoolTrueStrings = ["true", "1", "on", "yes", "t", "y"];
+export var BoolFalseStrings = ["false", "0", "off", "no", "f", "n"];
 export function isTrueString(str: string, options?: { allowPositiveNumbers?: boolean; }) {
     if (isNullOrEmptyString(str)) return false;
     else if (BoolTrueStrings.includes(str.toLowerCase()))
