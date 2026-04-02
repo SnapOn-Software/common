@@ -188,3 +188,10 @@ export function buffersToArrayBuffer(buffer: Buffer[] | Uint8Array): ArrayBuffer
         );
     }
 }
+
+export function cleanupBase64FileData(fileData: string) {
+    const base64Marker = 'base64,';
+    return (fileData.indexOf(base64Marker) >= 0)
+        ? fileData.slice(fileData.indexOf(base64Marker) + base64Marker.length)
+        : fileData;
+}
