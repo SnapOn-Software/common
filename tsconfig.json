@@ -4,7 +4,6 @@
     "rootDir": "./src",
     "sourceMap": true,
     "strict": false,
-    "moduleResolution": "Node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "declaration": false,

@@ -2,6 +2,7 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "module": "ESNext",
+        "moduleResolution": "node",
         "outDir": "lib/esm",
         /* Only need to create the declarations one time so do it in the ESM config */
         "declaration": true,

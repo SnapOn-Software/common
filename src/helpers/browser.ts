@@ -16,6 +16,8 @@ let _global = getGlobal<{
     urlChangedHandlerRegistered: false
 }, true);
 
+type Timeout = ReturnType<typeof globalThis.setTimeout>;
+
 export function triggerNativeEvent(ele: HTMLElement | Element | Document, eventName: string) {
     if (isNullOrUndefined(ele)) {
         return;
@@ -835,7 +837,7 @@ export function waitForWindowObject(typeFullName: string, windowOrParent?: Windo
 /** timeouts after 10 seconds by default */
 export function waitFor(checker: () => boolean, timeout = 10000, intervalLength = 50): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        var timeoutId: number = null;
+        var timeoutId: Timeout = null;
 
         var max = Math.round(timeout / intervalLength);
         var count = 0;
@@ -1131,7 +1133,7 @@ export function addEventListeners(eles: ElementOrElemenctList, events: string | 
 
 /** defer calling this function multiple times within X time frame to execute only once after the last call */
 export function debounce<T extends (...args) => void>(callback: T, ms: number, thisArg: any = null): T {
-    let timeoutId = null;
+    var timeoutId: Timeout = null;
     let func = (...args) => {
         globalThis.clearTimeout(timeoutId);
         timeoutId = globalThis.setTimeout(() => {
@@ -1152,7 +1154,7 @@ export function interval<T extends () => void>(callback: T, msBetweenCalls: numb
  */
 export function throttle<T extends (...args) => any>(callback: T, wait = 250, thisArg: any = null): T {
     let previous = 0;
-    let timeout: number | null = null;
+    let timeout: Timeout = null;
     let result: any;
     let storedContext = thisArg;
     let storedArgs: any[];
