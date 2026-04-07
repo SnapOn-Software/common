@@ -835,7 +835,7 @@ export function waitForWindowObject(typeFullName: string, windowOrParent?: Windo
 /** timeouts after 10 seconds by default */
 export function waitFor(checker: () => boolean, timeout = 10000, intervalLength = 50): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        var timeoutId: NodeJS.Timeout = null;
+        var timeoutId: number = null;
 
         var max = Math.round(timeout / intervalLength);
         var count = 0;
@@ -1037,7 +1037,7 @@ export function HTMLDecode(text: string) {
     return text;
 }
 
-export function ScriptEncode(e) {
+export function ScriptEncode(e?: string) {
     if (null === e || typeof e === "undefined")
         return "";
     for (var d = String(e), a = [], c = 0, g = d.length; c < g; c++) {
@@ -1152,7 +1152,7 @@ export function interval<T extends () => void>(callback: T, msBetweenCalls: numb
  */
 export function throttle<T extends (...args) => any>(callback: T, wait = 250, thisArg: any = null): T {
     let previous = 0;
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: number | null = null;
     let result: any;
     let storedContext = thisArg;
     let storedArgs: any[];
@@ -1248,7 +1248,7 @@ export function addStyleElement(cssText: string, id?: string) {
     return cssElm;
 }
 
-export function getReactInstanceFromElement(node) {
+export function getReactInstanceFromElement(node: Node | Object) {
     if (!isNullOrUndefined(node)) {
         for (const key in node) {
             if ((key).startsWith("__reactInternalInstance$") || key.startsWith("__reactFiber$")) {
@@ -1493,5 +1493,22 @@ export async function convertImageToBase64(imgEle: HTMLImageElement | SVGImageEl
         }
 
         crossOriginImg.src = src;
+    });
+}
+
+/** tags that can self-close in html */
+export const htmlVoidTags = new Set([
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr'
+]);
+
+/** normalize self closing tags in html like <div /> to <div></div> for tags that do not allow self-close */
+export function normalizeHtmlTags(html: string): string {
+    return html.replace(/<([a-z][a-z0-9-]*)(\s[^<>]*?)?\/>/gi, (match, tagName: string, attrs = '') => {
+        const lowerTag = tagName.toLowerCase();
+        if (htmlVoidTags.has(lowerTag)) {
+            return match;
+        }
+        return `<${tagName}${attrs}></${tagName}>`;
     });
 }
