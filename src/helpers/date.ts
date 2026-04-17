@@ -72,6 +72,26 @@ export function getToday() {
 export enum DateFormats {
     YMD = "yyyy-MM-dd"
 }
+
+const ticks10Minutes = 10 * 1000;
+const ticks1Hour = 6 * ticks10Minutes;
+const ticks24Hours = 24 * ticks1Hour;
+
+export const shiftDateValues = {
+    m10: ticks10Minutes,
+    h1: ticks1Hour,
+    h24: ticks24Hours,
+    w1: ticks24Hours * 7
+} as const;
+/** this option just adds/removes seconds/minutes/hours - does NOT respects the number of days in a month, and leap year etc
+ * use changeDate if you need to work on real dates
+ */
+export function shiftDate(shift: number | keyof typeof shiftDateValues, date = new Date()) {
+    return new Date(date.getTime() + (shiftDateValues[shift] || shift));
+}
+/** this option respects the number of days in a month, and leap year etc
+ * use shiftDate if you don't need to respect real dates
+ */
 export function changeDate(options: { years?: number; months?: number; days?: number; hours?: number; minutes?: number; }, startDate?: Date): Date {
     let newDate = isDate(startDate) ? new Date(startDate.getTime()) : new Date();//today, or the day that was passed
 
