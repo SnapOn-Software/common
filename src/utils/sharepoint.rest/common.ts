@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { firstOrNull } from "../../helpers/collections.base";
 import { jsonParse } from "../../helpers/json";
 import { normalizeGuid } from "../../helpers/strings";
@@ -7,12 +8,11 @@ import { IDictionary } from "../../types/common.types";
 import { IRestError } from "../../types/rest.types";
 import { FieldTypeAsString, IFieldInfoEX, IFieldTaxonomyInfo } from "../../types/sharepoint.types";
 import { ISPRestError } from "../../types/sharepoint.utils.types";
-import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { mediumLocalCache } from "../rest.vars";
 import { GetWebIdSync, GetWebInfoSync } from "./web";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/common");
+const logger = new CommonLogger("utils/sharepoint.rest/common");
 
 export const LIST_SELECT = `ListExperienceOptions,EffectiveBasePermissions,Description,Title,EnableAttachments,EnableModeration,BaseTemplate,BaseType,Id,Hidden,IsApplicationList,IsPrivate,IsCatalog,ImageUrl,ItemCount,ParentWebUrl,EntityTypeName,DefaultViewUrl,ParentWeb/Id,ParentWeb/Title`;
 export const LIST_EXPAND = `ParentWeb/Id,ParentWeb/Title`;

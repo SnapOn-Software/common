@@ -1,4 +1,4 @@
-import { CommonLogger } from "../config";
+import { CommonLogger } from "../common-logger";
 import { isDebug } from "../helpers/debug";
 import { getFromFullName, isFunction, isNullOrEmptyString, isNullOrUndefined, isString, isTypeofFullNameNullOrUndefined, typeofFullName } from "../helpers/typecheckers";
 import { ksGlobal } from "../types/knownscript.types";

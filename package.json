@@ -5,10 +5,6 @@
     "main": "lib/cjs/index.js",
     "module": "lib/esm/index.js",
     "types": "lib/types/index.d.ts",
-    "sideEffects": [
-        "lib/esm/helpers/debug.js",
-        "lib/esm/config.js"
-    ],
     "exports": {
         ".": {
             "types": "./lib/types/index.d.ts",

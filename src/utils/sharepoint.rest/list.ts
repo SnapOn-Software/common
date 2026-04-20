@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { PushNoDuplicate, firstOrNull, makeUniqueArray, toHash } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
 import { jsonClone } from "../../helpers/objects";
@@ -9,14 +10,13 @@ import { IDictionary } from "../../types/common.types";
 import { IRestOptions, contentTypes, jsonTypes } from "../../types/rest.types";
 import { BaseTypes, FieldTypeAsString, FieldTypes, IFieldInfo, IFieldInfoEX, IFieldInfoExHash, IFieldJsonSchema, IFieldLookupInfo, ISPEventReceiver, ListTemplateTypes, PageType, SPBasePermissionKind } from "../../types/sharepoint.types";
 import { GeListItemsFoldersBehaviour, IListWorkflowAssociation, IRestItem, ListExperienceOptions, iContentType, iList, iListVersionSettings, iListView } from "../../types/sharepoint.utils.types";
-import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync } from "../rest";
 import { longLocalCache, shortLocalCache } from "../rest.vars";
 import { GetRestBaseUrl, GetSiteUrl, LIST_EXPAND, LIST_SELECT, __getSPRestErrorData } from "./common";
 import { __fixGetListItemsResults } from "./listutils/common";
 import { GetContentTypes, GetContentTypesSync, GetListsSync, IGetContentTypesOptions } from "./web";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/list");
+const logger = new CommonLogger("utils/sharepoint.rest/list");
 
 /** returns /_api/web/lists/getById() or /_api/web/lists/getByTitle() */
 export function GetListRestUrl(siteUrl: string, listIdOrTitle: string): string {

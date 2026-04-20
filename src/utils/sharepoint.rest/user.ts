@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { filterEmptyEntries, firstOrNull, lastOrNull } from "../../helpers/collections.base";
 import { jsonStringify } from "../../helpers/json";
 import { ISPPeoplePickerControlFormEntity, IsSPPeoplePickerControlFormEntity, getPrincipalTypeFromPickerEntity, isExternalUser } from "../../helpers/sharepoint";
@@ -7,13 +8,12 @@ import { encodeURIComponentEX } from "../../helpers/url";
 import { contentTypes, jsonTypes } from "../../types/rest.types";
 import { ISiteGroupInfo, PrincipalType } from "../../types/sharepoint.types";
 import { IGroupInfo, IUserGroupInfo, IUserInfo } from "../../types/sharepoint.utils.types";
-import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync } from "../rest";
 import { longLocalCache, shortLocalCache } from "../rest.vars";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 import { GetSiteId } from "./web";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/user");
+const logger = new CommonLogger("utils/sharepoint.rest/user");
 var __currentUserId: number = null;
 const groupSelect = "Id,Title,Description,CanCurrentUserViewMembership,OnlyAllowMembersViewMembership,IsHiddenInUI,OwnerTitle";
 const userSelect = "PrincipalType,Id,LoginName,UserPrincipalName,Title,IsSiteAdmin,Email";

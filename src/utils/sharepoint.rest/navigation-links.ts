@@ -1,10 +1,10 @@
+import { CommonLogger } from "../../common-logger";
 import { isNullOrEmptyString, isNullOrUndefined } from "../../helpers/typecheckers";
 import { INavLinkInfo } from "../../types/sharepoint.types";
-import { ConsoleLogger } from "../consolelogger";
 import { GetJson } from "../rest";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/navigation-links");
+const logger = new CommonLogger("utils/sharepoint.rest/navigation-links");
 
 /** 
  * Get all navigation links in the top and side navigation of a SharePoint site 

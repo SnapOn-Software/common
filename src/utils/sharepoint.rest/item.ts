@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { chunkArray } from "../../helpers/collections.base";
 import { hasOwnProperty } from "../../helpers/objects";
 import { promiseNParallel } from "../../helpers/promises";
@@ -8,7 +9,6 @@ import { jsonTypes } from "../../types/rest.types";
 import { DateTimeFieldFormatType, IAttachmentInfo, IFieldCurrencyInfo, IFieldDateTimeInfo, IFieldInfoEX, IFieldNumberInfo, TaxonomyValueType } from "../../types/sharepoint.types";
 import { IRestItem } from "../../types/sharepoint.utils.types";
 import { LocaleKnownScript } from "../../utils/knownscript";
-import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync } from "../rest";
 import { shortLocalCache } from "../rest.vars";
 import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues, GetSiteUrl, __getSPRestErrorData, getFieldNameForUpdate, hasGlobalContext } from "./common";
@@ -16,7 +16,7 @@ import { GetList, GetListFields, GetListFieldsAsHash, GetListRestUrl } from "./l
 import { SPVersionToVersionId } from "./listutils/common";
 import { GetUser, GetUserSync } from "./user";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/item");
+const logger = new CommonLogger("utils/sharepoint.rest/item");
 
 /** can only select FileSizeDisplay in REST api */
 export const FileSizeColumnInternalNames = ["FileSizeDisplay", "File_x0020_Size"];

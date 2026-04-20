@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { sortArray } from "../../helpers/collections.base";
 import { isISODate, isISODateUTC } from "../../helpers/date";
 import { jsonStringify } from "../../helpers/json";
@@ -13,7 +14,6 @@ import { IRestOptions, jsonTypes } from "../../types/rest.types";
 import { IFieldInfoEX, IFolderInfo, IRententionLabel, ISiteGroupInfo, IUserCustomActionInfo, IWebInfo, SPBasePermissionKind } from "../../types/sharepoint.types";
 import { IAppTile, IGroupInfo, IRestRoleDefinition, IRootWebInfo, ISiteInfo, ITimeZone, IUserInfo, IWebBasicInfo, IWebRegionalSettings, WebTypes, iContentType, iList } from "../../types/sharepoint.utils.types";
 import { AutoDiscoverTenantInfo } from "../auth/discovery";
-import { ConsoleLogger } from "../consolelogger";
 import { toIsoDateFormat } from "../date";
 import { MomentTimezoneJSKnownScript } from "../knownscript";
 import { GetJson, GetJsonSync } from "../rest";
@@ -22,7 +22,7 @@ import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl,
 import { GetListFields, GetListFieldsSync, GetListRestUrl } from "./list";
 import { SPTimeZoneIdToIANATimeZoneName } from "./timzone-map";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/web");
+const logger = new CommonLogger("utils/sharepoint.rest/web");
 
 export async function GetSiteInfo(siteUrl?: string): Promise<ISiteInfo> {
     siteUrl = GetSiteUrl(siteUrl);

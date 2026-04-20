@@ -1,7 +1,10 @@
-import { IDictionary, nsCountriesByCode, nsReadOnlyFieldTypes, nsReadOnlyFieldTypesForSublist, tnsCountryCode, tnsFieldTypes, tnsrFieldInfo } from "../../exports-index";
+import { IDictionary } from "../../types/common.types";
+import { tnsFieldTypes, nsReadOnlyFieldTypesForSublist, nsReadOnlyFieldTypes } from "../../types/ns/ns.common.types";
+import { nsCountriesByCode, tnsCountryCode } from "../../types/ns/ns.countries.rest";
 import { nsCountriesByEnum, tnsCountryEnum } from "../../types/ns/ns.countries.restlet";
 import { nsFieldEX } from "../../types/ns/ns.fieldex.types";
 import { insSuiteTalkRestErrorData, tnsField } from "../../types/ns/ns.rest.types";
+import { tnsrFieldInfo } from "../../types/ns/ns.restlet.types";
 import { firstOrNull } from "../collections.base";
 import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString } from "../typecheckers";
 import { isnsSuiteTalkRestErrorData } from "./type-checkers";

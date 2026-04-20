@@ -1,13 +1,13 @@
+import { CommonLogger } from "../common-logger";
 import { jsonParse } from "../helpers/json";
 import { assign, getGlobal, hasOwnProperty, jsonClone } from "../helpers/objects";
 import { isNullOrEmptyString, isNullOrUndefined, isNumber, isObject, isPrimitiveValue, isString } from "../helpers/typecheckers";
 import { IDictionary } from "../types/common.types";
 import { AllRestCacheOptionsKeys, IJsonSyncResult, IRequestBody, IRequestObjects, IRestCacheOptions, IRestError, IRestOptions, IRestRequestOptions, jsonTypes } from "../types/rest.types";
-import { ConsoleLogger } from "./consolelogger";
 import { getCacheItem, setCacheItem } from "./localstoragecache";
 import { getFormDigest } from "./sharepoint.rest/digest";
 
-var logger = ConsoleLogger.get("utils/rest");
+var logger = new CommonLogger("utils/rest");
 
 const supressDebugMessages = true;
 

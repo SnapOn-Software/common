@@ -1,4 +1,4 @@
-import { configInfo } from "../_dependencies";
+import { CommonConfig } from "../common-config";
 import { kwiz_cdn_hostname_fastring, kwiz_cdn_hostname_localdev, kwiz_cdn_hostname_production } from "./constants";
 import { deleteCookie, getCookie, setCookie } from "./cookies";
 import { getKWizComGlobal } from "./objects";
@@ -129,7 +129,7 @@ export function isDebug() {
     var kGlobal = GetGlobalDebug();
 
     if (isNullOrUndefined(kGlobal.Debug._debug)) {
-        kGlobal.Debug._debug = configInfo.IsLocalDev ||
+        kGlobal.Debug._debug = CommonConfig.i.IsLocalDev ||
             globalThis.location.href.indexOf('kwdebug=true') > 0 ||
             globalThis.location.href.indexOf('/workbench.aspx') > 0 ||
             getCookie("KWizComDebug") === "true";

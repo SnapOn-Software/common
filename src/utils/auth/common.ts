@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { firstOrNull } from "../../helpers/collections.base";
 import { promiseLock } from "../../helpers/promises";
 import { getUniqueId } from "../../helpers/random";
@@ -6,13 +7,12 @@ import { makeFullUrl } from "../../helpers/url";
 import { ISPFxOAuthToken, SPFxAuthTokenType } from "../../types/auth";
 import { IRestOptions } from "../../types/rest.types";
 import { isSPPageContextInfoReady, isSPPageContextInfoReadySync } from "../../utils/sharepoint.rest/context";
-import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { GetJson, GetJsonSync } from "../rest";
 import { GetRestBaseUrl, hasGlobalContext } from "../sharepoint.rest/common";
 import { AutoDiscoverTenantInfo, DiscoverTenantInfo } from "./discovery";
 
-const logger = ConsoleLogger.get("utils/auth/common");
+const logger = new CommonLogger("utils/auth/common");
 
 export function GetTokenAudiencePrefix(appId: string) {
     return `api://${appId}`;

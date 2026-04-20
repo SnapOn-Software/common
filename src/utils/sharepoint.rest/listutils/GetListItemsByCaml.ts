@@ -1,4 +1,5 @@
-import { configInfo } from "../../../_dependencies";
+import { CommonConfig } from "../../../common-config";
+import { CommonLogger } from "../../../common-logger";
 import { chunkArray, firstIndexOf, firstOrNull, makeUniqueArray, toHash } from "../../../helpers/collections.base";
 import { EnsureViewFields, GetOrderByFromCaml, RemoveOrderByFromCaml, getFieldOutputType } from "../../../helpers/sharepoint";
 import { isDate, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumeric } from "../../../helpers/typecheckers";
@@ -7,7 +8,6 @@ import { IDictionary } from "../../../types/common.types";
 import { jsonTypes } from "../../../types/rest.types";
 import { IFieldInfoEX } from "../../../types/sharepoint.types";
 import { GeListItemsFoldersBehaviour, IRestItem } from "../../../types/sharepoint.utils.types";
-import { ConsoleLogger } from "../../consolelogger";
 import { GetJson } from "../../rest";
 import { GetSiteUrl, __getSPRestErrorData } from "../common";
 import { GetListFields, GetListRestUrl } from "../list";
@@ -15,7 +15,7 @@ import { SPServerLocalTimeToUTCSync } from "../web";
 import { GetItemsById } from "./GetListItemsById";
 import { SkipFields, __fixGetListItemsResults } from "./common";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/listutils/GetListItemsByCaml");
+const logger = new CommonLogger("utils/sharepoint.rest/listutils/GetListItemsByCaml");
 
 interface ICamlOptions {
     /** Optional, default: 1000. 0: get all items. */
@@ -162,7 +162,7 @@ export async function GetListItemsByCaml(siteUrl: string, listIdOrTitle: string,
 
         if (postProcessOrderBy) {
             //re-apply sort
-            if (configInfo.IsLocalDev) {
+            if (CommonConfig.i.IsLocalDev) {
                 logger.table(itemsResult.map(i => {
                     let row = {
                         Id: i.Id,
@@ -190,7 +190,7 @@ export async function GetListItemsByCaml(siteUrl: string, listIdOrTitle: string,
                 return 0;
             });
 
-            if (configInfo.IsLocalDev) {
+            if (CommonConfig.i.IsLocalDev) {
                 logger.table(itemsResult.map(i => {
                     let row = {
                         Id: i.Id,

@@ -1,14 +1,14 @@
+import { CommonLogger } from "../../../common-logger";
 import { lastIndexOf, toHash } from "../../../helpers/collections.base";
 import { isNotEmptyArray, isNullOrEmptyString, isNullOrUndefined, isNumber } from "../../../helpers/typecheckers";
 import { IDictionary } from "../../../types/common.types";
 import { jsonTypes } from "../../../types/rest.types";
 import { FileSystemObjectTypes, IFieldInfoEX, IFieldLookupInfo } from "../../../types/sharepoint.types";
 import { GeListItemsFoldersBehaviour, IRestItem } from "../../../types/sharepoint.utils.types";
-import { ConsoleLogger } from "../../consolelogger";
 import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues } from "../common";
 import { GetItemsByIdSync } from "./GetListItemsById";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/listutils/common");
+const logger = new CommonLogger("utils/sharepoint.rest/listutils/common");
 
 export function __fixGetListItemsResults(siteUrl: string, listIdOrTitle: string, items: IRestItem[], foldersBehaviour?: GeListItemsFoldersBehaviour, expandedLookupFields?: IFieldInfoEX[]): IRestItem[] {
     let folders: { [folderPath: string]: IRestItem; } = {};

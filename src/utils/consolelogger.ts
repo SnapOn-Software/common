@@ -1,4 +1,4 @@
-import { configInfo } from "../_dependencies";
+import { CommonConfig } from "../common-config";
 import { getSecondsElapsed } from "../helpers/date";
 import { consoleLoggerFilter, isDebug } from "../helpers/debug";
 import { getGlobal, jsonClone } from "../helpers/objects";
@@ -46,13 +46,14 @@ export class ConsoleLogger {
         this.context = context;
     }
 
+    /** @deprecated should use CommonLogger */
     public static get(name: string, prefix?: string) {
         var global = ConsoleLogger._getGlobal();
         var loggers = global.loggers;
 
         if (!global.loggedBuild) {
             global.loggedBuild = true;
-            console.debug(`${ConsoleLogger.commonPrefix()} KWIZ build ${configInfo.ReleaseStatus}.${configInfo.BuildNumber}`);
+            console.debug(`${ConsoleLogger.commonPrefix()} KWIZ build ${CommonConfig.i.ReleaseStatus}.${CommonConfig.i.BuildNumber}`);
         }
         const key = `${name}|${prefix}`;
         return loggers[key] || (loggers[key] = new ConsoleLogger({ name: name, prefix: prefix }));

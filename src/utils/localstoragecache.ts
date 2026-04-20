@@ -1,3 +1,4 @@
+import { CommonLogger } from "../common-logger";
 import { sizeOf } from "../helpers/collections.base";
 import { isDebug } from "../helpers/debug";
 import { parse as FlattedParse, stringify as FlattedStringify } from "../helpers/flatted";
@@ -5,7 +6,6 @@ import { jsonParse } from "../helpers/json";
 import { getGlobal } from "../helpers/objects";
 import { isDate, isNullOrEmptyString, isNullOrUndefined, isNumber } from "../helpers/typecheckers";
 import { ILocalStorageCacheLifetime } from "../types/localstoragecache.types";
-import { ConsoleLogger } from "./consolelogger";
 
 /**key with prefix, value is a date string */
 interface IExpirationsDictionary {
@@ -13,7 +13,7 @@ interface IExpirationsDictionary {
     build: string;
 }
 
-let logger = ConsoleLogger.get("utils/localstoragecache");
+let logger = new CommonLogger("utils/localstoragecache");
 
 export const keyPrefix = "kw$_";
 export const LOCAL_STORAGE_PREFIX = "kwizcom-localstorage-cache";
@@ -246,9 +246,9 @@ export function getCacheItem<T>(key: string, options?: {
         let isExpired = _isKeyExpired(keyWithPrefix);
         if (!isExpired) {
             return _cache[key] as T;
-        } 
+        }
         //else remove it from cache
-        removeCacheItem(key);        
+        removeCacheItem(key);
     }
 
     if (isLocalStorageSupported()) {

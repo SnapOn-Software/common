@@ -1,3 +1,4 @@
+import { CommonLogger } from "../../common-logger";
 import { jsonStringify } from "../../helpers/json";
 import { GetError } from "../../helpers/objects";
 import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString, isNullOrUndefined, isNumber, isNumeric, newGuid } from "../../helpers/typecheckers";
@@ -6,14 +7,13 @@ import { IDictionary } from "../../types/common.types";
 import { IRequestBody, IRestOptions, IRestResponseType, jsonTypes } from "../../types/rest.types";
 import { IFolderBasicInfo, IFolderInfo } from "../../types/sharepoint.types";
 import { FileLevel, IFileInfoWithModerationStatus, ModerationStatus } from "../../types/sharepoint.utils.types";
-import { ConsoleLogger } from "../consolelogger";
 import { GetJson, GetJsonSync } from "../rest";
 import { longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache } from "../rest.vars";
 import { GetRestBaseUrl, GetSiteUrl } from "./common";
 import { GetListRestUrl } from "./list";
 import { SPVersionToVersionId } from "./listutils/common";
 
-const logger = ConsoleLogger.get("utils/sharepoint.rest/file.folder");
+const logger = new CommonLogger("utils/sharepoint.rest/file.folder");
 
 let existingFolders: string[] = [];
 
@@ -555,7 +555,7 @@ export async function GetFolder(siteUrl: string, folderUrl: string, options: { a
 export async function GetFileItemId(siteUrl: string, fileServerRelativeUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
     const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/ListItemAllFields/id`;
-    const result = await GetJson<{ value: number; }>(restUrl, null, {        
+    const result = await GetJson<{ value: number; }>(restUrl, null, {
         jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });
@@ -565,7 +565,7 @@ export async function GetFileItemId(siteUrl: string, fileServerRelativeUrl: stri
 export function GetFileItemIdSync(siteUrl: string, fileServerRelativeUrl: string) {
     siteUrl = GetSiteUrl(siteUrl);
     const restUrl = `${GetRestBaseUrl(siteUrl)}/web/getFileByServerRelativeUrl('${encodeURIComponentEX(fileServerRelativeUrl)}')/ListItemAllFields/id`;
-    const result = GetJsonSync<{ value: number; }>(restUrl, null, {        
+    const result = GetJsonSync<{ value: number; }>(restUrl, null, {
         jsonMetadata: jsonTypes.nometadata,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     });

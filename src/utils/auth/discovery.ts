@@ -1,7 +1,7 @@
-import { normalizeUrl } from "../../exports-index";
 import { promiseOnce } from "../../helpers/promises";
 import { normalizeGuid } from "../../helpers/strings";
 import { isNullOrEmptyString, isNullOrUndefined, isValidGuid } from "../../helpers/typecheckers";
+import { normalizeUrl } from "../../helpers/url";
 import { AzureEnvironment, ITenantInfo } from "../../types/auth";
 import { GetJson, GetJsonSync } from "../rest";
 import { hasGlobalContext } from "../sharepoint.rest/common";

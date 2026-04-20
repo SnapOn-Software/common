@@ -1,10 +1,10 @@
+import { CommonLogger } from "../../common-logger";
 import { waitForWindowObject } from "../../helpers/browser";
 import { firstOrNull } from "../../helpers/collections.base";
 import { SPBasePermissions } from "../../helpers/sharepoint";
 import { isNotEmptyString, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumeric, isTypeofFullNameNullOrUndefined, isTypeofFullNameUndefined } from "../../helpers/typecheckers";
 import { getQueryStringParameter } from "../../helpers/url";
 import { SPBasePermissionKind } from "../../types/sharepoint.types";
-import { ConsoleLogger } from "../consolelogger";
 import { getCacheItem, setCacheItem } from "../localstoragecache";
 import { GetJson, GetJsonSync } from "../rest";
 import { longLocalCache } from "../rest.vars";
@@ -12,7 +12,7 @@ import { GetListRootFolderSync, GetListSync, GetListViewsSync } from "./list";
 import { GetCurrentUserSync } from "./user";
 import { GetSiteIdSync, GetWebIdSync } from "./web";
 
-const logger = ConsoleLogger.get("utils/sharepoint/context");
+const logger = new CommonLogger("utils/sharepoint/context");
 
 export async function isSharePointOnline() {
     if (isSPOCommonUrl() === true
