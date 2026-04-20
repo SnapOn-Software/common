@@ -16,8 +16,8 @@ export interface iConfigParams {
     ProjectName: string;
 };
 export interface iConfigResult {
-    GetLogger: typeof ConsoleLogger.get;
+    GetLogger: (name: string) => ConsoleLogger;
     /** @deprecated call GetLogger instead  */
-    logger: typeof ConsoleLogger.get;
+    logger: (name: string) => ConsoleLogger;
     configInfo: iConfigInfo
 }
