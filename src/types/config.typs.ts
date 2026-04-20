@@ -7,6 +7,7 @@ export interface iConfigInfo {
     IsFastRing: boolean;
     IsProduction: boolean;
     ReleaseStatus: releasetypes;
+    /** short code for product/project name, usually surrounded by [] */
     ProjectName: string;
     _configured: boolean;
 }

@@ -7,7 +7,9 @@ import { isFunction, isNullOrEmptyString, isNullOrUndefined, isNumber, isNumeric
 import { IDictionary } from "../types/common.types";
 
 const DEFAULT_LOGGER_NAME = "DEFAULT";
-const LoggerPrefix = "[kw]";
+function DefaultLoggerPrefix() {
+    return CommonConfig.i.ProjectName;
+}
 
 interface ILoggerGlobal {
     loggers: IDictionary<ConsoleLogger>;
@@ -110,7 +112,7 @@ export class ConsoleLogger {
             + ":" + padLeft(d.getSeconds().toString(), 2, "0")
             + "." + padRight(d.getMilliseconds().toString(), 3, "0");
 
-        return `[${timestamp}] ${prefix || LoggerPrefix}`;
+        return `[${timestamp}] ${prefix || DefaultLoggerPrefix()}`;
     }
     private contextPrefix() {
         return `${ConsoleLogger.commonPrefix(this.context.prefix)} [${this.context.name}]`;
