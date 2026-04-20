@@ -7,7 +7,7 @@ export function config(params: iConfigParams): iConfigResult {
     SetPolyfills();
     SetDependencies(params);
     const GetLogger = (name: string) => {
-        return ConsoleLogger.get(name);
+        return ConsoleLogger.get(name, CommonConfig.i.ProjectName);
     };
 
     return {
