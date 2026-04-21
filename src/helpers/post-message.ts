@@ -13,11 +13,20 @@ export function postMessageListener<T extends syncPostMessageValues["type"]>(
     type: T,
     handler: (data: Extract<syncPostMessageValues, { type: T }>) => void
 ) {
-    window.addEventListener('message', (event: MessageEvent<any>) => {
+    const listener = (event: MessageEvent<syncPostMessageValues>) => {
         if (event.data && event.data.type === type) {
             handler(event.data as Extract<syncPostMessageValues, { type: T }>);
         }
-    }, false);
+    };
+
+    window.addEventListener("message", listener, false);
+
+    return {
+        /** in case you want to dispose of it */
+        dispose: () => {
+            window.removeEventListener("message", listener, false);
+        }
+    };
 }
 
 export function postMessageSender(
