@@ -73,11 +73,15 @@ export enum DateFormats {
     YMD = "yyyy-MM-dd"
 }
 
-const ticks10Minutes = 10 * 1000;
+const ticks1Second = 1 * 1000;
+const ticks1Minute = 60 * ticks1Second;
+const ticks10Minutes = 10 * ticks1Minute;
 const ticks1Hour = 6 * ticks10Minutes;
 const ticks24Hours = 24 * ticks1Hour;
 
 export const shiftDateValues = {
+    s1: ticks1Second,
+    m1: ticks1Minute,
     m10: ticks10Minutes,
     h1: ticks1Hour,
     h24: ticks24Hours,
