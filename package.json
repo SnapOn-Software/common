@@ -14,8 +14,7 @@
         "./package.json": "./package.json"
     },
     "scripts": {
-        "watch": "npm-run-all --parallel watch:esm watch:cjs",
-        "watch-push": "yalc push --sig",
+        "watch": "npm-run-all --parallel watch:esm watch:cjs watch:push-once",
         "build": "npm run reindex-project && npm run build:esm && npm run build:cjs",
         "unit-test": "node --import tsx --test src",
         "npm-v-patch": "npm version patch && git push origin main:main && git push --tags",
@@ -32,6 +31,8 @@
         "remove-all-index-files": "cd src && del /s /f /q exports-index.ts",
         "watch:esm": "tsc-watch --project tsconfig.esm.json",
         "watch:cjs": "tsc-watch --project tsconfig.cjs.json",
+        "watch-push": "yalc push --sig",
+        "watch:push-once": "node scripts/watch-push-once.js",
         "build:esm": "tsc -p tsconfig.esm.json",
         "build:cjs": "tsc -p tsconfig.cjs.json",
         "build:test": "tsc -p tsconfig.test.json"
