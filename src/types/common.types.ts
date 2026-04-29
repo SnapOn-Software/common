@@ -17,10 +17,23 @@ export interface ITypesDisplayInfo<ValueType> {
 
 export type DateOrNull = Date | null;
 
+/** @deprecated prefer using iFileData2 to avoid exessive memory usage converting large files from base64 to array buffer */
 export interface iFileData {
     filename: string;
     base64: string;
 }
+interface iFileData64 {
+    filename: string;
+    base64: string;
+    buffer?: never;
+}
+interface iFileDataBuffer {
+    filename: string;
+    buffer: ArrayBuffer;
+    base64?: never;
+}
+/** use if you support either base64 or ArrayBuffer */
+export type tFileDataV2 = iFileData64 | iFileDataBuffer;
 
 /** allow using Omit on complex join types */
 export type DeepOmit<T, K extends keyof T> = T extends any ? Omit<T, K> : never;
