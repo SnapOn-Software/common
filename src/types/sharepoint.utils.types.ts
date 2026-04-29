@@ -193,6 +193,7 @@ export interface IFileInfo {
     TimeLastModified: Date;
     Title: string;
     Level: FileLevel;
+    ListItemAllFields?: IDictionary<any>;
 }
 
 export interface IFileInfoWithModerationStatus extends IFileInfo {
