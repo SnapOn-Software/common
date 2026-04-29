@@ -193,13 +193,13 @@ export interface IFileInfo {
     TimeLastModified: Date;
     Title: string;
     Level: FileLevel;
-    ListItemAllFields?: IDictionary<any>;
+    ListItemAllFields?: IDictionary<unknown>;
 }
 
 export interface IFileInfoWithModerationStatus extends IFileInfo {
-    ListItemAllFields?: {
-        OData__ModerationStatus?: ModerationStatus
-    }
+    ListItemAllFields?: IDictionary<unknown> & {
+        OData__ModerationStatus?: ModerationStatus;
+    };
 }
 
 export interface ITimeZone {
