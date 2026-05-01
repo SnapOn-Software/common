@@ -99,3 +99,8 @@ export function unsign<T>(jwtSecret: string, token: string) {
         return null;
     }
 }
+
+export function isSignatureExpired(unsigned: { exp?: number, iat?: number; }) {
+    const now = Math.floor(Date.now() / 1000);
+    return unsigned.iat >= now && now > unsigned.exp;
+}
