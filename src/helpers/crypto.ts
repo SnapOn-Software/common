@@ -29,6 +29,7 @@ function base64UrlDecodeUtf8(value: string) {
     return CryptoJS.enc.Utf8.stringify(wordArray);
 }
 
+/** use the jose library from @kwiz/node for server apps */
 export async function sign<T extends IDictionary<string | number | boolean | string[]>>(jwtSecret: string, payload: T, options?: { exp?: number | string | Date; }) {
     const header = { alg: "HS256", typ: "JWT" };
     const iat = Math.floor(Date.now() / 1000);
@@ -51,7 +52,7 @@ export async function sign<T extends IDictionary<string | number | boolean | str
     const token = `${unsignedToken}.${signature}`;
     return token;
 }
-
+/** use the jose library from @kwiz/node for server apps */
 export async function unsign<T>(jwtSecret: string, token: string) {
     try {
         if (!token) {
