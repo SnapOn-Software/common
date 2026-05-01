@@ -17,6 +17,10 @@ export var noop = async () => { };
 /* eslint-disable-next-line @typescript-eslint/no-empty-function */
 export var noops = () => { };
 
+function isHtmlElement(value: any): value is HTMLElement {
+    return typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+}
+
 /** get or create kwizcom object from top window or current window, set allowFromTop if you want to try to get from window.top */
 export function getKWizComGlobal(allowFromTop?: boolean) {
     if (allowFromTop) {
@@ -125,7 +129,7 @@ export function objectsEqual<T extends object>(o1: T, o2: T, ignoreKeys?: string
             return false;
         }
     }
-    else if (o1 instanceof HTMLElement) {
+    else if (isHtmlElement(o1)) {
         return o1 === o2;
     }
 
@@ -145,7 +149,7 @@ export function jsonClone<T>(obj: T): T {
     let result = obj;
 
     try {
-        if (obj instanceof HTMLElement)
+        if (isHtmlElement(obj))
             return obj.cloneNode(true) as T;
         //if exists and worked - this handles dates correctly too
         return structuredClone(obj);
