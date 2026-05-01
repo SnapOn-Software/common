@@ -5,7 +5,7 @@ import { newGuid } from './typecheckers';
 
 test('sign', async t => {
     const password = "1@EWEDF$E%GRE%G" + newGuid();
-    const signed = await sign(password, { "name": "test user 1" });
-    const restored = await unsign(password, signed);
+    const signed = sign(password, { "name": "test user 1" });
+    const restored = unsign(password, signed);
     await t.test('sign', () => assert.strictEqual(restored.name, "test user 1"));
 });

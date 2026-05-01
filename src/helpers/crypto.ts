@@ -1,9 +1,9 @@
 import CryptoJS from 'crypto-js';
 import { CommonLogger } from '../common-logger';
+import { IDictionary } from "../types/common.types";
 import { shiftDate } from './date';
 import { GetError } from './objects';
 import { isDate, isNumber } from './typecheckers';
-import { IDictionary } from "../types/common.types";
 
 const logger = new CommonLogger("crypto");
 
@@ -30,7 +30,7 @@ function base64UrlDecodeUtf8(value: string) {
 }
 
 /** use the jose library from @kwiz/node for server apps */
-export async function sign<T extends IDictionary<string | number | boolean | string[]>>(jwtSecret: string, payload: T, options?: { exp?: number | string | Date; }) {
+export function sign<T extends IDictionary<string | number | boolean | string[]>>(jwtSecret: string, payload: T, options?: { exp?: number | string | Date; }) {
     const header = { alg: "HS256", typ: "JWT" };
     const iat = Math.floor(Date.now() / 1000);
     const exp = isNumber(options?.exp)
@@ -53,7 +53,7 @@ export async function sign<T extends IDictionary<string | number | boolean | str
     return token;
 }
 /** use the jose library from @kwiz/node for server apps */
-export async function unsign<T>(jwtSecret: string, token: string) {
+export function unsign<T>(jwtSecret: string, token: string) {
     try {
         if (!token) {
             throw new Error("Invalid token");
