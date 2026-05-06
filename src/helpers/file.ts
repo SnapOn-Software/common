@@ -1,5 +1,5 @@
 import { escapeRegExp } from "./strings";
-import { isNullOrUndefined } from "./typecheckers";
+import { isNullOrEmptyString, isNullOrUndefined } from "./typecheckers";
 
 //https://support.microsoft.com/en-gb/office/restrictions-and-limitations-in-onedrive-and-sharepoint-64883a5d-228e-48f5-b3d2-eb39e07630fa
 //These names aren't allowed for files or folders: .lock, CON, PRN, AUX, NUL, COM0 - COM9, LPT0 - LPT9, _vti_, 
@@ -19,6 +19,7 @@ function _getRegexCollection() {
     };
 }
 
+/** @deprecated use validateFilenameExplicit */
 export function validateFilename(fileNameWithExtension: string) {
     let filenameWithOutExtension = fileNameWithExtension;
     let split = filenameWithOutExtension.split(".");
@@ -37,6 +38,7 @@ export function validateFilename(fileNameWithExtension: string) {
     };
 }
 
+/** @deprecated use validateFoldernameExplicit */
 export function validateFoldername(folderName: string) {
     let regexCollection = _getRegexCollection();
 
