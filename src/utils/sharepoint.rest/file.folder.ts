@@ -358,7 +358,7 @@ export async function GetFileEx<T>(siteUrl: string, fileServerRelativeUrl: strin
         // } catch (e) {
         //     return { Exists: false };
         // }
-        versionPart = `/versions(${SPVersionToVersionId(options.version)})/`;
+        versionPart = `/versions(${SPVersionToVersionId(options.version)})`;
     }
 
     let fileRestUrl = GetFileRestUrl(siteUrl, fileServerRelativeUrl);
