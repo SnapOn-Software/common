@@ -1,5 +1,5 @@
 import { escapeRegExp } from "./strings";
-import { isNullOrEmptyString, isNullOrUndefined } from "./typecheckers";
+import { isNullOrUndefined } from "./typecheckers";
 
 //https://support.microsoft.com/en-gb/office/restrictions-and-limitations-in-onedrive-and-sharepoint-64883a5d-228e-48f5-b3d2-eb39e07630fa
 //These names aren't allowed for files or folders: .lock, CON, PRN, AUX, NUL, COM0 - COM9, LPT0 - LPT9, _vti_, 
@@ -74,4 +74,19 @@ export function getFileExtension(fileName: string, options?: {
     if (lastDot >= 0) return fileName.slice(lastDot + 1).toLowerCase();
     //no dot ? return empty, or fileName?
     return !isNullOrUndefined(options) && options.emptyIfMissing === true ? "" : fileName;
+}
+
+export function formatFileSize(sizeInBytes: number): string {
+    const oneKb = 1024;
+    const oneMb = oneKb * oneKb;
+
+    if (sizeInBytes >= oneMb * 0.01) {
+        return `${(sizeInBytes / oneMb).toFixed(2)}MB`;
+    }
+
+    if (sizeInBytes >= oneKb * 0.01) {
+        return `${(sizeInBytes / oneKb).toFixed(2)}KB`;
+    }
+
+    return `${sizeInBytes.toFixed(0)}B`;
 }
