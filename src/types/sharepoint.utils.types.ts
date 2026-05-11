@@ -1,4 +1,5 @@
 /** types for KWIZ sharepoint API */
+import { isNumeric } from "../helpers/typecheckers";
 import { IDictionary } from "./common.types";
 import { AttachmentFilesRESTValue, BaseTypes, FileSystemObjectTypes, IFieldInfoEX, ISPEventReceiver, ListTemplateTypes, PrincipalType, RoleType } from "./sharepoint.types";
 
@@ -194,6 +195,8 @@ export interface IFileInfo {
     Title: string;
     Level: FileLevel;
     ListItemAllFields?: IDictionary<unknown>;
+    /** api returns length as string, our get file endpoints convert it to Size as number. */
+    Size: number;
 }
 
 export interface IFileInfoWithModerationStatus extends IFileInfo {

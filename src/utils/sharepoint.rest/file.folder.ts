@@ -1,6 +1,7 @@
 import { CommonLogger } from "../../common-logger";
 import { jsonStringify } from "../../helpers/json";
 import { GetError } from "../../helpers/objects";
+import { PatchSPFiles } from "../../helpers/sharepoint";
 import { isNotEmptyArray, isNotEmptyString, isNullOrEmptyString, isNullOrUndefined, isNumber, isNumeric, newGuid } from "../../helpers/typecheckers";
 import { encodeURIComponentEX, makeServerRelativeUrl, normalizeUrl } from "../../helpers/url";
 import { IDictionary } from "../../types/common.types";
@@ -131,17 +132,18 @@ export function DeleteFolder(siteUrl: string, folderUrl: string): Promise<boolea
         .then(r => true)
         .catch<boolean>((e) => false);
 }
-
 export function GetFolderFiles(siteUrl: string, folderUrl: string): Promise<IFileInfoWithModerationStatus[]> {
     siteUrl = GetSiteUrl(siteUrl);
     folderUrl = makeServerRelativeUrl(folderUrl, siteUrl);
     var requestUrl = `${GetRestBaseUrl(siteUrl)}/Web/getFolderByServerRelativeUrl(serverRelativeUrl='${folderUrl}')`
-        + `/files?$select=Level,Exists,Name,ServerRelativeUrl,Title,TimeCreated,TimeLastModified,ListItemAllFields/OData__ModerationStatus&$expand=ListItemAllFields`;
+        + `/files?$select=Length,Level,Exists,Name,ServerRelativeUrl,Title,TimeCreated,TimeLastModified,ListItemAllFields/OData__ModerationStatus&$expand=ListItemAllFields`;
 
     return GetJson<{ d: { results: IFileInfoWithModerationStatus[]; }; }>(requestUrl, null, {
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     }).then(r => {
-        return r.d && r.d.results || [];
+        if (isNotEmptyArray(r?.d?.results))
+            return PatchSPFiles(r.d.results);
+        else return [];
     }).catch<IFileInfoWithModerationStatus[]>(() => {
         return [];
     });

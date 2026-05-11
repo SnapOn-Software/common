@@ -1,6 +1,6 @@
 import { IDictionary } from "../types/common.types";
 import { FieldTypeAsString, FieldTypes, IFieldCalculatedInfo, IFieldInfo, IFieldInfoEX, IFieldJsonSchema, IFieldTaxonomyInfo, PrincipalType, RententionLabelFieldValueType, SPBasePermissionKind, ThumbnailValueType, UrlValueType } from "../types/sharepoint.types";
-import { UserEntityValueType } from "../types/sharepoint.utils.types";
+import { IFileInfo, UserEntityValueType } from "../types/sharepoint.utils.types";
 import { isElement, waitFor } from "./browser";
 import { firstOrNull, forEach } from "./collections.base";
 import { deleteCookie, getCookie, setCookie } from "./cookies";
@@ -773,4 +773,18 @@ export function isAppWebSync() {
 export function isExternalUser(loginName: string) {
     if (isNullOrEmptyString(loginName)) return false;
     return loginName.indexOf("#ext#@") >= 0;
+}
+
+
+/** patch the array in place, and return it */
+export function PatchSPFiles(files: IFileInfo[]) {
+    files.forEach(file => PatchSPFile(file));
+    return files;
+}
+/** patch the file in place, and return it */
+export function PatchSPFile(file: IFileInfo) {
+    const length = file["Length"];
+    if (isNumeric(length))
+        file.Size = Number(length);
+    return file;
 }
