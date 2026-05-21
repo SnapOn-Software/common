@@ -24,15 +24,9 @@ export function IsClassicPage() {
         return false;
     }
 
-    if (!isTypeofFullNameUndefined("_spWebPartComponents")
-        || !isTypeofFullNameUndefined("g_Workspace")
-        || isTypeofFullNameFunction("$_global_ie55up")
-        || !isTypeofFullNameUndefined("_spBodyOnLoadCalled")
-    ) {
-        //_spWebPartComponents = inline global var that contains web part info
+    if (!isTypeofFullNameUndefined("g_Workspace") 
+        ||!isTypeofFullNameUndefined("g_commandUIHandlers")) {
         //g_Workspace = inline global var that contains the worskpace element selector
-        //$_global_ie55up = global function for IE polyfills on classic pages
-        //_spBodyOnLoadCalled = inline global var
         return true;
     }
 
@@ -40,7 +34,8 @@ export function IsClassicPage() {
         && document.body.childNodes.length > 0) {
         //only classic pages have the s4-workspace element
         let s4workspaceEle = document.getElementById("s4-workspace");
-        if (isElement(s4workspaceEle)) {
+        let s4ribbonrowEle = document.getElementById("s4-ribbonrow");
+        if (isElement(s4workspaceEle) || isElement(s4ribbonrowEle)) {
             return true;
         }
     }
