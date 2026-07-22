@@ -39,7 +39,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/KWizCom/common.git"
+        "url": "git+https://github.com/SnapOn-Software/common.git"
     },
     "keywords": [
         "KWIZ",
