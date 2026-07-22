@@ -56,10 +56,10 @@
     ],
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/KWizCom/common/issues",
+        "url": "https://github.com/SnapOn-Software/common/issues",
         "email": "support@kwizcom.com"
     },
-    "homepage": "https://github.com/KWizCom/common#readme",
+    "homepage": "https://github.com/SnapOn-Software/common#readme",
     "private": false,
     "engines": {
         "node": ">=16"
