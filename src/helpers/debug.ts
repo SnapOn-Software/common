@@ -129,16 +129,21 @@ export function isDebug() {
     var kGlobal = GetGlobalDebug();
 
     if (isNullOrUndefined(kGlobal.Debug._debug)) {
-        kGlobal.Debug._debug = CommonConfig.i.IsLocalDev ||
-            globalThis.location.href.indexOf('kwdebug=true') > 0 ||
-            globalThis.location.href.indexOf('/workbench.aspx') > 0 ||
-            getCookie("KWizComDebug") === "true";
+        let setValue = CommonConfig.i.IsLocalDev;
+        if (!setValue && globalThis.location) {
+            setValue = globalThis.location.href.indexOf('kwdebug=true') > 0 ||
+                globalThis.location.href.indexOf('/workbench.aspx') > 0 ||
+                getCookie("KWizComDebug") === "true";
+        }
+
+        kGlobal.Debug._debug = setValue;
     }
     return kGlobal.Debug._debug === true;
 }
 /** returns true if this is a kwizcom production/test tenant */
 export function isKWizComTenant() {
-    return globalThis.location.host === "kwizcom.sharepoint.com" || window.location.host === "kwizcomqa.sharepoint.com";
+    const location = globalThis.location || window.location;
+    return location && (location.host === "kwizcom.sharepoint.com" || location.host === "kwizcomqa.sharepoint.com");
 }
 export function isDebugOnKWizComTenant() {
     return isKWizComTenant() && isDebug();
