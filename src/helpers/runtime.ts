@@ -39,4 +39,4 @@ export function detectRuntime(): "browser" | "node" | "worker" | "unknown" {
 }
 
 export const isBrowser = () => detectRuntime() === "browser";
-export const isNode = () => detectRuntime() === "node";
+export const isNodeJS = () => detectRuntime() === "node";
