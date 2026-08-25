@@ -1,229 +1,155 @@
 # Developer Guide
 
-This document describes how to work with `@kwiz/common`, how the package is structured, and the conventions that should be followed when adding or modifying shared functionality.
+This guide is for contributors working on `@kwiz/common`.
+
+The public [`README.md`](README.md) is intentionally consumer-focused. Build requirements, package architecture, export conventions, testing, and release practices belong here.
+
+## Development Requirements
+
+- Node.js 18.18+
+- npm 9.8.1+
+
+The published package supports Node.js 16+, but the current development toolchain requires Node.js 18.18+.
+
+The repository currently declares:
+
+```json
+{
+    "packageManager": "npm@9.5.1"
+}
+```
+
+Use the repository's declared npm version when practical.
 
 ## Package Goals
 
-`@kwiz/common` is intended to behave like a proper tree-shakeable TypeScript library.
+`@kwiz/common` should behave like a tree-shakeable TypeScript library.
 
 The package should provide:
 
-- Convenient top-level imports from `@kwiz/common`
-- A root entry point containing exports only
-- No runtime imports from the root `index.ts`
+- Convenient top-level imports for lightweight/common functionality
+- Focused package entry points for heavier feature areas
+- A static export-only root entry point
 - No generated `exports-index` barrel files
 - No post-build scripts that rewrite generated imports
-- ESM output that Webpack can tree shake effectively
-- CJS output for compatibility where required
-- Shared functionality that remains application-agnostic
-
-A consuming application should be able to write:
-
-```ts
-import {
-    GetList,
-    CreateField,
-    isNullOrEmptyString
-} from "@kwiz/common";
-```
-
-without forcing unrelated parts of the package into the final application bundle.
-
----
+- ESM output that modern bundlers can tree shake effectively
+- CommonJS output for compatibility
+- Application-agnostic shared functionality
 
 ## Repository Structure
 
-The important package directories are:
-
 ```text
-src/
+src/            TypeScript source
 lib/
-    esm/
-    cjs/
-    types/
-    test/
+    esm/        Generated ES module output
+    cjs/        Generated CommonJS output
+    types/      Generated TypeScript declarations
+    test/       Generated test output
 ```
 
-### `src/`
+All development should be performed under `src/`.
 
-Contains the TypeScript source code.
+Files under `lib/` are generated build artifacts and should not be treated as source files.
 
-All development should be performed here.
+## Public Package Entry Points
 
-### `lib/esm/`
+The supported package subpaths are defined by `package.json#exports`.
 
-Generated ES module output.
+Currently:
 
-This is the primary output used by modern bundlers such as Webpack.
+```text
+@kwiz/common
+@kwiz/common/auth
+@kwiz/common/crypto
+@kwiz/common/sharepoint-rest
+```
 
-### `lib/cjs/`
+A source entry file does not automatically make a package subpath public. If a new supported subpath is added, update both:
 
-Generated CommonJS output.
+1. the appropriate source entry file; and
+2. `package.json#exports`.
 
-This exists for compatibility with consumers that still require CommonJS modules.
-
-### `lib/types/`
-
-Generated TypeScript declaration files.
-
-### `lib/test/`
-
-Generated output used by the test configuration.
-
-Files under `lib/` are build artifacts and should not be treated as source files.
-
----
+Do not document a subpath as public unless it is actually present in the export map.
 
 ## Root Entry Point
 
-The root package entry point is:
+The root entry point is:
 
 ```text
 src/index.ts
 ```
 
-It must remain a **static export-only file**.
+It must remain a static export-only module.
 
-### Correct
+### Preferred
 
 ```ts
-export { GetList } from "./sharepoint/lists/GetList";
-export { CreateField } from "./sharepoint/fields/CreateField";
-export { isNullOrEmptyString } from "./utils/string";
+export { something } from "./helpers/something";
+```
+
+or:
+
+```ts
+export * from "./helpers/something";
 ```
 
 ### Avoid
 
 ```ts
-import GetList from "./sharepoint/lists/GetList";
+import { something } from "./helpers/something";
 
-export { GetList };
+export { something };
 ```
 
-Also avoid code such as:
+Also avoid executing initialization logic from `src/index.ts`.
 
-```ts
-import { default as _script } from "./utils/script";
-
-export const script = _script;
-```
-
-The root entry point should not execute imports simply to re-export their values.
-
-Static exports give Webpack and other bundlers the clearest module graph possible and improve tree shaking.
-
----
+The root should describe the package API surface, not act as an application bootstrapper.
 
 ## Do Not Reintroduce Generated Barrels
 
-The project previously generated files named:
+The project previously generated `exports-index.*` files.
 
-```text
-exports-index.*
-```
+That workflow has been removed.
 
-These files were removed and should not be reintroduced.
-
-Do not add generated export barrels under:
-
-```text
-src/
-lib/esm/
-lib/cjs/
-lib/types/
-lib/test/
-```
-
-The package previously used tooling around these generated indexes, including:
+Do not reintroduce:
 
 ```text
 create-ts-index
 fix-folder-imports.js
-```
-
-That workflow has been removed.
-
-The following scripts should not be recreated:
-
-```text
 reindex-project
 remove-all-index-files
 ```
 
-Exports should instead be maintained explicitly in `src/index.ts`.
+Prefer explicit exports maintained in the appropriate entry file.
 
----
+## Adding a Public Export
 
-## Adding a New Public Export
-
-When adding functionality that should be available through:
-
-```ts
-import { Something } from "@kwiz/common";
-```
-
-add the implementation to the appropriate source folder and explicitly export it from `src/index.ts`.
-
-For example:
-
-```text
-src/
-    helpers/
-        getSomething.ts
-```
-
-```ts
-// src/helpers/getSomething.ts
-
-export function getSomething() {
-    // ...
-}
-```
-
-Then add:
+For lightweight/common functionality intended for the root package:
 
 ```ts
 // src/index.ts
-
 export { getSomething } from "./helpers/getSomething";
 ```
 
-Prefer direct exports from the actual implementation module.
+For functionality belonging to a focused feature area, export it through that feature entry point instead.
 
-Avoid creating additional barrel files unless there is a specific architectural reason for one.
-
----
-
-## Internal Modules
-
-Not every module needs to be exported from the package root.
-
-If a helper exists only to support another module internally, leave it internal.
-
-For example:
+Examples:
 
 ```text
-src/
-    helpers/
-        publicHelper.ts
-        internalHelper.ts
+src/auth.ts
+src/crypto.ts
+src/sharepoint-rest.ts
 ```
 
-If consumers only need `publicHelper`, export only that module:
+If you create a new public package subpath, also add it to `package.json#exports`.
 
-```ts
-export { publicHelper } from "./helpers/publicHelper";
-```
-
-This keeps the public API intentional and reduces the number of modules that consumers can accidentally depend on.
-
----
+Not every internal module needs to be publicly exported.
 
 ## Side Effects
 
 The package declares side-effect metadata in `package.json`.
 
-Current side-effectful modules include:
+Current side-effectful outputs include:
 
 ```json
 {
@@ -240,55 +166,27 @@ Current side-effectful modules include:
 }
 ```
 
-This metadata tells bundlers that most modules are safe to remove when they are not imported.
+Assume new modules should be side-effect free unless import-time execution is genuinely required.
 
-### When adding new modules
+A side-effect-free module normally only defines or exports functions, classes, constants, and types.
 
-Assume new modules should be side-effect free.
+If a module executes logic immediately when imported, determine whether its generated ESM/CJS outputs must be added to `package.json#sideEffects`.
 
-A module is generally side-effect free if importing it only defines functions, classes, constants, or types.
+Do not mark the whole package as side-effectful.
 
-For example:
+## Configuration Contract
 
-```ts
-export function add(a: number, b: number) {
-    return a + b;
-}
-```
+Configuration-dependent functionality and shared logging use `config()`.
 
-This is safe.
-
-Be careful with modules that execute logic immediately when imported.
-
-For example:
+The current input contract is:
 
 ```ts
-window.someGlobalValue = true;
+config({
+    BuildNumber,
+    ReleaseStatus,
+    ProjectName
+});
 ```
-
-or:
-
-```ts
-registerSomething();
-```
-
-or:
-
-```ts
-loadPolyfills();
-```
-
-These are side effects.
-
-If a new module must perform work at import time, determine whether it needs to be added to the `sideEffects` list in `package.json`.
-
-Do not mark the entire package as side-effectful unless absolutely necessary.
-
----
-
-## Configuration
-
-Applications consuming `@kwiz/common` must initialize the package using `config()`.
 
 Example:
 
@@ -297,204 +195,186 @@ import { config } from "@kwiz/common";
 
 export const { GetLogger, configInfo } = config({
     BuildNumber,
-    IsLocalDev,
-    ReleaseStatus,
-    ProjectName: "[cms]"
-});
-```
-
-Each independently loaded application entry point must ensure configuration has occurred before using helpers that depend on it.
-
-For applications with multiple Webpack entry points, a shared bootstrap module is recommended.
-
-```ts
-// initCommon.ts
-
-import { config } from "@kwiz/common";
-
-export const { GetLogger, configInfo } = config({
-    BuildNumber,
-    IsLocalDev,
     ReleaseStatus,
     ProjectName: "[my-project]"
 });
 ```
 
-Then import it from each application entry point:
+Do **not** pass `IsLocalDev`, `IsFastRing`, or `IsProduction`.
 
-```ts
-import "./initCommon";
+Those values are derived automatically from `ReleaseStatus` and exposed through `configInfo`.
+
+Supported release values are:
+
+```text
+dev
+fastring
+production
+npm
 ```
 
-If a bootstrap module is imported only for its side effect, ensure the consuming application does not remove it during tree shaking.
+For applications with multiple independently loaded Webpack entry points, use a shared bootstrap module or an explicit initialization function so configuration occurs before dependent code runs.
 
----
+## TypeScript
 
-## TypeScript Configuration
+The package targets ES2019.
 
-The TypeScript target remains:
+Do not change the TypeScript target solely to affect tree shaking.
 
-```json
-{
-    "target": "es2019"
-}
-```
-
-Do not change the target simply to improve bundling or tree shaking.
-
-The current library optimization relies primarily on:
+The current optimization strategy relies on:
 
 - ESM output
 - Static exports
 - Correct `sideEffects` metadata
-- Avoiding generated barrel modules
+- Avoiding generated barrels
+- Focused package entry points
 - Allowing the consuming bundler to analyze the module graph
 
-Any change to the TypeScript target should be treated as a separate compatibility decision and tested against all consuming applications.
+Changes to the target should be treated as compatibility changes and tested against consuming applications.
 
----
-
-## Building the Package
-
-Install dependencies:
+## Installing Dependencies
 
 ```bash
 npm install
 ```
 
-Build the package:
+## Building
+
+Build ESM and CommonJS output:
 
 ```bash
 npm run build
 ```
 
-The standard build runs:
+The build runs:
 
-```json
-{
-    "build": "npm run build:esm && npm run build:cjs"
-}
+```text
+npm run build:esm
+npm run build:cjs
 ```
 
-The build should not require export-index generation or post-processing scripts.
+Individual builds:
 
----
+```bash
+npm run build:esm
+npm run build:cjs
+```
+
+Explain TypeScript build inputs:
+
+```bash
+npm run build-explain
+```
 
 ## Tests
 
-Run the test suite before publishing or validating package changes:
+Run the standard test suite:
 
 ```bash
 npm test
 ```
 
-Changes to shared helpers should include corresponding tests where practical.
+The current test script builds CommonJS output, builds the test configuration, and runs Mocha.
 
-Because this package is consumed by multiple applications, small regressions can affect several products at once.
+The repository also exposes:
 
----
+```bash
+npm run unit-test
+```
 
-## Testing Changes in AppsWeb
+for the Node test-runner/tsx-based tests under `src`.
 
-The recommended local workflow is to build and link `@kwiz/common`.
+Changes to shared helpers should include tests where practical.
+
+## Dependency Analysis
+
+Run:
+
+```bash
+npm run check-dependencies
+```
+
+when reviewing dependency relationships or structural changes.
+
+## Local Development
+
+The repository supports both `yalc` and `npm link`.
+
+### yalc
+
+Publish the package to the local yalc store:
+
+```bash
+npm run yalc-link
+```
+
+The watch workflow runs the ESM build, CommonJS build, and yalc push helper in parallel:
+
+```bash
+npm run watch
+```
+
+### npm link
 
 From the `common` repository:
 
 ```bash
-npm install
 npm run build
-npm link
+npm run npm-link
 ```
 
-Then from AppsWeb:
+Then from the consuming project:
 
 ```bash
 npm link @kwiz/common
 ```
 
-Run the consuming application normally, or generate the Webpack bundle report:
-
-```bash
-npm run production:analyze
-```
-
-This allows you to verify both functionality and bundle impact.
-
----
+After package changes, rebuild or push the package and rebuild the consuming application.
 
 ## Verifying Tree Shaking
 
-When validating changes to the package, do not only verify that AppsWeb compiles.
+Compilation alone is not enough for changes involving exports, imports, dependencies, or side effects.
 
-Also inspect the generated bundle.
+Inspect the consuming application's bundle after significant structural changes.
 
-For example, if AppsWeb imports:
-
-```ts
-import {
-    GetList,
-    CreateField,
-    isNullOrEmptyString
-} from "@kwiz/common";
-```
-
-the resulting bundle should not automatically include every unrelated module from `@kwiz/common`.
-
-Use:
-
-```bash
-npm run production:analyze
-```
-
-and inspect the Webpack bundle report.
-
-When reviewing the report, look for:
+Look for:
 
 - Unexpected large sections of `@kwiz/common`
-- Modules that are included without being imported
-- Entire folders being pulled in through barrel files
+- Modules included without being imported
+- Heavy feature areas reachable through unrelated imports
 - Side-effectful modules preventing tree shaking
-- New dependencies that significantly increase bundle size
+- New dependencies significantly increasing bundle size
 
-Bundle size should be treated as part of the review criteria for changes to shared library structure.
+Bundle impact should be part of review for package-structure changes.
 
----
+## Dependency Guidelines
+
+Before adding a dependency, consider whether:
+
+- The functionality can reasonably be implemented without another package
+- The dependency increases consuming bundle size
+- The dependency supports tree shaking
+- The dependency introduces browser or Node compatibility requirements
+- It belongs in `dependencies`, `devDependencies`, or `peerDependencies`
+
+Avoid product-specific dependencies unless the module is intentionally product-specific.
 
 ## Development Guidelines
 
-When adding or changing shared functionality:
+When changing shared functionality:
 
-- Keep code application-agnostic
-- Do not introduce AppsWeb-, Forms-, CMS-, DVP-, or other product-specific behavior into generic helpers
+- Keep reusable helpers application-agnostic
 - Prefer small focused modules
 - Avoid module-level execution unless required
 - Keep public exports intentional
 - Prefer direct exports from implementation files
 - Avoid unnecessary barrel files
-- Preserve backward compatibility wherever practical
-- Avoid introducing large dependencies for small utility functions
-- Add tests for reusable behavior
-- Build the package before testing it in consuming applications
-- Verify significant changes in at least one real consumer
-
----
-
-## Dependency Guidelines
-
-Because `@kwiz/common` is shared across multiple applications, adding a dependency has a larger impact than adding one to a single application.
-
-Before adding a dependency, consider whether:
-
-- The functionality can reasonably be implemented without another package
-- The dependency will increase consuming bundle sizes
-- The dependency already exists elsewhere in the KWIZ application stack
-- The dependency supports tree shaking
-- The dependency introduces browser or runtime compatibility requirements
-- The dependency belongs in `dependencies`, `devDependencies`, or `peerDependencies`
-
-Avoid adding product-specific libraries to `@kwiz/common`.
-
----
+- Preserve backward compatibility where practical
+- Avoid large dependencies for small utility functions
+- Add or update tests where practical
+- Build before testing in consumers
+- Validate significant changes in at least one real consuming application
+- Review bundle impact when changing module structure
 
 ## Before Committing
 
@@ -506,53 +386,47 @@ npm run build
 npm test
 ```
 
-Then validate the package in a consuming application when appropriate.
-
-For changes involving package structure, exports, dependencies, or side effects, also run an AppsWeb bundle analysis:
+For structural changes, also run:
 
 ```bash
-npm run production:analyze
+npm run check-dependencies
 ```
 
----
+and inspect an appropriate consuming application's bundle.
 
 ## Release Checklist
 
-Before releasing a new version:
+Before releasing:
 
 - [ ] Source changes are complete
-- [ ] Public exports are correctly defined in `src/index.ts`
+- [ ] Public exports are intentional
+- [ ] `package.json#exports` matches supported package subpaths
+- [ ] Generated `.d.ts` contracts match the intended public API
 - [ ] No generated `exports-index` files were introduced
 - [ ] New modules do not introduce unintended import-time side effects
-- [ ] `sideEffects` metadata is updated if required
+- [ ] `sideEffects` metadata is correct
 - [ ] `npm run build` succeeds
 - [ ] `npm test` succeeds
-- [ ] Changes have been validated in a consuming KWIZ application
-- [ ] Bundle impact has been reviewed for structural or dependency changes
-- [ ] Package version has been updated appropriately
-- [ ] The package is released using the approved repository release process
-
----
+- [ ] Relevant changes were validated in a consuming application
+- [ ] Bundle impact was reviewed for structural/dependency changes
+- [ ] Package version was updated appropriately
+- [ ] The package is released using the approved repository process
 
 ## Design Principle
 
-The package root should act as an API surface, not as an application bootstrapper.
-
-In general:
+The package entry points should act as API surfaces, not application bootstrap code.
 
 ```text
-src/index.ts
+entry point
     ↓
 static exports
     ↓
-individual implementation modules
+implementation modules
     ↓
-Webpack includes only what the consuming application actually needs
+consumer bundler includes only reachable functionality
 ```
 
-Keeping that structure intact is important to preserving the tree-shaking improvements made to `@kwiz/common`.
-
----
+Preserving that structure is key to keeping `@kwiz/common` maintainable and tree-shakeable.
 
 ## License
 

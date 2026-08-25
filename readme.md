@@ -1,41 +1,82 @@
 # `@kwiz/common`
 
-Shared TypeScript helpers and utilities used across KWIZ applications.
+Shared TypeScript utilities used across KWIZ applications for Microsoft 365 and SharePoint development.
 
-This package provides a common foundation for application configuration, logging, and reusable functionality that should behave consistently across KWIZ projects.
+`@kwiz/common` provides reusable application-agnostic helpers for configuration, logging, authentication, cryptography, SharePoint REST, collections, promises, URLs, dates, types, and other common functionality.
 
 ## Installation
-
-Install the package in the consuming project:
 
 ```bash
 npm install @kwiz/common
 ```
 
-## Required Initialization
+## Requirements
 
-Every application must initialize `@kwiz/common` before using any of its helpers.
+- Node.js 16+
 
-Call `config()` once from each independently loaded application entry point:
+The published package targets ES2019 and supports both ES modules and CommonJS.
+
+## Application Configuration
+
+Applications that use configuration-dependent functionality or shared logging should initialize `@kwiz/common` before those APIs are used.
 
 ```ts
 import { config } from "@kwiz/common";
 
 export const { GetLogger, configInfo } = config({
-    BuildNumber,   
-
+    BuildNumber,
     ReleaseStatus,
-
-    // Identifies the consuming application in shared log output.
-    ProjectName: "[cms]"
+    ProjectName: "[my-project]"
 });
 ```
 
-Replace `"[cms]"` with a short, recognizable identifier for the consuming project.
+### Configuration Parameters
+
+| Property | Type | Purpose |
+| --- | --- | --- |
+| `BuildNumber` | `string` | Identifies the current consuming application build. |
+| `ReleaseStatus` | `"dev" \| "fastring" \| "production" \| "npm"` | Identifies the runtime/release environment. |
+| `ProjectName` | `string` | Prefix used to identify the consuming application in shared logging. |
+
+Environment flags are derived automatically from `ReleaseStatus`; they are not passed to `config()`.
+
+```ts
+configInfo.IsLocalDev;
+configInfo.IsFastRing;
+configInfo.IsProduction;
+```
+
+The current mapping is:
+
+| `ReleaseStatus` | `IsLocalDev` | `IsFastRing` | `IsProduction` |
+| --- | ---: | ---: | ---: |
+| `"dev"` | `true` | `false` | `false` |
+| `"fastring"` | `false` | `true` | `false` |
+| `"production"` | `false` | `false` | `true` |
+| `"npm"` | `false` | `false` | `true` |
+
+### Logging
+
+The recommended way to obtain a logger is from the result of `config()`:
+
+```ts
+import { GetLogger } from "./initCommon";
+
+const logger = GetLogger("MyService");
+
+logger.debug("debug message");
+logger.info("information message");
+logger.warn("warning message");
+logger.error("error message");
+```
+
+`config()` also returns `configInfo`, which contains the normalized shared configuration.
+
+The legacy `logger(name)` return value is deprecated; use `GetLogger(name)` instead.
 
 ## Applications with Multiple Entry Points
 
-If the project produces multiple entry bundles, each bundle that can load independently must perform this initialization.
+If an application produces multiple independently loaded bundles, each entry point must ensure configuration has occurred before configuration-dependent code runs.
 
 A shared bootstrap module is recommended:
 
@@ -45,23 +86,18 @@ import { config } from "@kwiz/common";
 
 export const { GetLogger, configInfo } = config({
     BuildNumber,
-    IsLocalDev,
     ReleaseStatus,
     ProjectName: "[my-project]"
 });
 ```
 
-Import the bootstrap module before other application code:
+Then import it from each independently loaded entry point:
 
 ```ts
 import "./initCommon";
 ```
 
-If initialization is performed only through an import for its side effect, ensure the module is not removed by tree shaking.
-
-Mark it as a side effect in the consuming project's `package.json`, or import and call an explicit initialization function from every entry point.
-
-For example:
+If the bootstrap module is imported only for its side effect, make sure the consuming bundler does not remove it during tree shaking. For example:
 
 ```json
 {
@@ -71,79 +107,100 @@ For example:
 }
 ```
 
-## Configuration
+Alternatively, expose an explicit initialization function and call it from each entry point.
 
-The configuration object supplies runtime and build information shared by the package:
+## Public Entry Points
 
-| Property        | Purpose                                                       |
-| --------------- | ------------------------------------------------------------- |
-| `BuildNumber`   | Identifies the current application build.                     |
-| `IsLocalDev`    | Enables verbose logging and development behavior when `true`. |
-| `ReleaseStatus` | Describes the release state of the current build.             |
-| `ProjectName`   | Adds a recognizable project prefix to shared log output.      |
+The package currently exposes these supported entry points:
 
-`config()` returns the configured package services, including:
+```text
+@kwiz/common
+@kwiz/common/auth
+@kwiz/common/crypto
+@kwiz/common/sharepoint-rest
+```
 
-| Export       | Purpose                                                           |
-| ------------ | ----------------------------------------------------------------- |
-| `GetLogger`  | Creates or retrieves a logger configured for the current project. |
-| `configInfo` | Exposes the normalized configuration used by the package.         |
+### Root
 
-Export these values from the bootstrap module so the rest of the application uses the same configured instances.
-
-## Usage
-
-After initialization, import shared helpers from the package or the project's bootstrap module as appropriate:
+Use the root package for general shared helpers, types, configuration, logging, and other common utilities:
 
 ```ts
-import { GetLogger } from "./initCommon";
-
-const logger = GetLogger("MyService");
+import {
+    config,
+    CommonLogger,
+    normalizeUrl,
+    jsonParse,
+    promiseAllSequential
+} from "@kwiz/common";
 ```
 
-Do not initialize the package separately in ordinary feature modules. They should consume the configuration established by the application entry point.
+The root entry point uses static exports so modern bundlers can remove unused modules.
 
-## Development Guidelines
+### Authentication
 
-When adding or changing shared functionality:
-
-* Keep helpers application-agnostic.
-* Avoid introducing product-specific dependencies or behavior.
-* Preserve backward compatibility wherever practical.
-* Export public functionality through the package's supported entry points.
-* Add or update tests for behavior shared by consuming projects.
-* Verify changes in at least one consuming application before release.
-
-## Building
-
-Install dependencies and run the scripts defined by the repository:
-
-```bash
-npm install
-npm run build
+```ts
+import {
+    AutoDiscoverTenantInfo
+} from "@kwiz/common/auth";
 ```
 
-Run the test suite before publishing or linking the package:
+### Cryptography
 
-```bash
-npm test
+```ts
+import {
+    sign
+} from "@kwiz/common/crypto";
 ```
 
-## Consuming Local Changes
+### SharePoint REST
 
-When testing package changes locally, link the package using the repository's standard local-package workflow.
+```ts
+import {
+    GetList
+} from "@kwiz/common/sharepoint-rest";
+```
 
-Rebuild and relink after changing generated output, then restart the consuming application's development build if it does not detect the update automatically.
+Use focused entry points for heavier functionality when possible. This keeps dependencies explicit and gives consuming bundlers a cleaner module graph.
 
-## Release Checklist
+## Tree Shaking
 
-Before releasing a new version:
+`@kwiz/common` is published as both ESM and CommonJS and includes `sideEffects` metadata for modules that must be preserved.
 
-* [ ] Build the package successfully.
-* [ ] Run the test suite.
-* [ ] Validate the change in a consuming KWIZ project.
-* [ ] Update the package version according to the scope of the change.
-* [ ] Publish the package using the repository's approved release process.
+For the best tree-shaking results:
+
+- Prefer ESM in modern bundlers.
+- Import only the functionality your application needs.
+- Use focused package entry points for auth, crypto, and SharePoint REST functionality.
+- Avoid importing unrelated modules solely for side effects.
+
+## Package Output
+
+The package publishes:
+
+```text
+lib/
+    esm/      ES module output
+    cjs/      CommonJS output
+    types/    TypeScript declarations
+```
+
+The root package resolves to:
+
+```text
+ESM:        lib/esm/index.js
+CommonJS:   lib/cjs/index.js
+Types:      lib/types/index.d.ts
+```
+
+## Development
+
+For repository setup, build requirements, testing, export conventions, tree-shaking guidance, and release practices, see [`development.md`](development.md).
+
+## Repository
+
+Source: `SnapOn-Software/common`
+
+Issues can be reported through the GitHub repository.
 
 ## License
 
