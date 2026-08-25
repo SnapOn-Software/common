@@ -1,5 +1,5 @@
 import { getGlobal } from './helpers/objects';
-import { iConfigInfo } from './types/config.typs';
+import { iConfigInfo } from './types/config.types';
 
 /** Entry point must call config to initialize this. Always access .i property to get the latest project data */
 export class CommonConfig {

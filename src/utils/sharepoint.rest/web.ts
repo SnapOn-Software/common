@@ -20,7 +20,7 @@ import { GetJson, GetJsonSync } from "../rest";
 import { extraLongLocalCache, longLocalCache, mediumLocalCache, noLocalCache, shortLocalCache, weeekLongLocalCache } from "../rest.vars";
 import { CONTENT_TYPES_SELECT, CONTENT_TYPES_SELECT_WITH_FIELDS, GetRestBaseUrl, GetSiteUrl, GetSiteUrlLocally, LIST_EXPAND, LIST_SELECT, WEB_SELECT, hasGlobalContext } from "./common";
 import { GetListFields, GetListFieldsSync, GetListRestUrl } from "./list";
-import { SPTimeZoneIdToIANATimeZoneName } from "./timzone-map";
+import { SPTimeZoneIdToIANATimeZoneName } from "./timezone-map";
 
 const logger = new CommonLogger("utils/sharepoint.rest/web");
 
@@ -51,6 +51,7 @@ export function GetSiteInfoSync(siteUrl?: string): ISiteInfo {
     if (result.success) {
         var id = normalizeGuid(result.result.d.Id);
         var serverRelativeUrl = normalizeUrl(result.result.d.ServerRelativeUrl);
+        if (isNullOrEmptyString(serverRelativeUrl)) serverRelativeUrl = "/"; //can't return "" since it will be treated as current sub site, when tyring to access the root site from a sub-site
         return { Id: id, ServerRelativeUrl: serverRelativeUrl };
     }
     return null;
@@ -248,7 +249,11 @@ export interface IGetContentTypesOptions {
 function _getContentTypesRequestUrl(siteUrl: string, options: Omit<IGetContentTypesOptions, "ignoreFolders" | "ignoreHidden"> = {}) {
     const { fromRootWeb, includeFields, listIdOrTitle } = options;
 
-    let query = `$select=${includeFields === true ? CONTENT_TYPES_SELECT : CONTENT_TYPES_SELECT_WITH_FIELDS}${includeFields === true ? "&$expand=Fields" : ""}`;
+    const select = includeFields
+        ? CONTENT_TYPES_SELECT_WITH_FIELDS
+        : CONTENT_TYPES_SELECT;
+
+    const query = `$select=${select}${includeFields ? "&$expand=Fields" : ""}`;
 
     if (!isNullOrEmptyString(listIdOrTitle)) {
         return `${GetListRestUrl(siteUrl, listIdOrTitle)}/contenttypes?${query}`;
@@ -717,7 +722,7 @@ export function GetWebInfoSync(siteUrl: string, webId?: string): IWebBasicInfo {
 }
 
 export async function GetWebRoleDefinitions(siteUrl: string): Promise<IRestRoleDefinition[]> {
-    return GetJson<{ d: { results: IRestRoleDefinition[]; }; }>(GetRestBaseUrl(siteUrl) + `/web/RoleDefinitions?filter=Hidden ne true`, null, {
+    return GetJson<{ d: { results: IRestRoleDefinition[]; }; }>(GetRestBaseUrl(siteUrl) + `/web/RoleDefinitions?$filter=Hidden ne true`, null, {
         ...longLocalCache,
         spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
     })
@@ -744,7 +749,7 @@ export async function GetRoleAssignments(siteUrl: string, listIdOrTitle?: string
 
 /** Web sub webs for the selected site */
 export async function GetSubWebs(siteUrl: string, options?: { allowAppWebs?: boolean; }): Promise<IWebInfo[]> {
-    return GetJson<{ d: { results: IWebInfo[]; }; }>(GetRestBaseUrl(siteUrl) + `/web/webs${options && options.allowAppWebs ? "" : "&$filter=WebTemplate ne 'APP'"}`, null,
+    return GetJson<{ d: { results: IWebInfo[]; }; }>(GetRestBaseUrl(siteUrl) + `/web/webs${options && options.allowAppWebs ? "" : "?$filter=WebTemplate ne 'APP'"}`, null,
         {
             ...shortLocalCache,
             spWebUrl: siteUrl//allow getDigest to work when not in SharePoint
@@ -944,9 +949,9 @@ export async function SPServerLocalTimeToUTC(siteUrl: string, date: string | Dat
     let regionalSettings = await GetServerTimeZone(siteUrl);
     let timeZone = SPTimeZoneIdToIANATimeZoneName[`${regionalSettings.Id}`];
 
-    // todo: Include the moment/moment-timezone library as a depondency so it can be imported and chunked using webpack to reduce
+    // todo: Include the moment/moment-timezone library as a dependency so it can be imported and chunked using webpack to reduce
     // bundled package size
-    if (!isNullOrEmptyString(timeZone) && globalThis instanceof Window) {
+    if (!isNullOrEmptyString(timeZone) && typeof Window !== 'undefined' && globalThis instanceof Window) {
         try {
             let momentTimezone = await MomentTimezoneJSKnownScript.load();
             let result = _momentLocalISOToUTC(date, timeZone, momentTimezone);
@@ -1248,7 +1253,7 @@ function _getCustomActionsBaseRestUrl(siteUrl?: string, options: { listId?: stri
     return restUrl;
 }
 
-function _parseCustomActionReponse(action: IUserCustomActionInfo) {
+function _parseCustomActionResponse(action: IUserCustomActionInfo) {
     if (isNullOrUndefined(action)) {
         return action;
     }
@@ -1303,7 +1308,7 @@ export async function GetUserCustomActions(siteUrl: string, listId?: string, all
     try {
         let response = await GetJson<{ value: IUserCustomActionInfo[]; }>(restUrl, null, restOptions);
         if (!isNullOrUndefined(response) && !isNullOrEmptyArray(response.value)) {
-            return response.value.map(_parseCustomActionReponse);
+            return response.value.map(_parseCustomActionResponse);
         }
     } catch {
     }
@@ -1323,7 +1328,7 @@ export async function GetUserCustomActionById(siteUrl: string, customActionId: s
     try {
         let response = await GetJson<IUserCustomActionInfo>(restUrl, null, restOptions);
         if (!isNullOrUndefined(response)) {
-            return _parseCustomActionReponse(response)
+            return _parseCustomActionResponse(response)
         }
     } catch {
     }
@@ -1343,7 +1348,7 @@ export async function GetUserCustomActionByName(siteUrl: string, name: string, l
     try {
         let response = await GetJson<{ value: IUserCustomActionInfo[]; }>(restUrl, null, restOptions);
         if (!isNullOrUndefined(response) && !isNullOrEmptyArray(response.value)) {
-            return response.value.map(_parseCustomActionReponse);
+            return response.value.map(_parseCustomActionResponse);
         }
     } catch {
     }
@@ -1366,7 +1371,7 @@ export async function AddUserCustomAction(siteUrl: string, userCustomActionInfo:
 
         let response = await GetJson<IUserCustomActionInfo>(restUrl, JSON.stringify(data), restOptions);
         if (!isNullOrUndefined(response)) {
-            return _parseCustomActionReponse(response);
+            return _parseCustomActionResponse(response);
         }
     } catch {
     }

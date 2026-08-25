@@ -1,6 +1,6 @@
 import { CommonConfig } from './common-config';
 import { SetPolyfills } from './helpers/polyfill';
-import { iConfigInfo, iConfigParams, iConfigResult } from './types/config.typs';
+import { iConfigInfo, iConfigParams, iConfigResult } from './types/config.types';
 import { ConsoleLogger } from './utils/consolelogger';
 
 export function config(params: iConfigParams): iConfigResult {
