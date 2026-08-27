@@ -10,6 +10,8 @@ export interface insAccessToken {
     accessToken: string;
     userId?: string;
     refreshToken?: string;
+    /** for users who changed their ui language, rest api will require this to be sent in header */
+    acceptLanguage?: string;
 }
 export type tnsContext = insTokenInfo | insAccessToken;
 export type tnsRecordContext = tnsContext & { record: string; };
