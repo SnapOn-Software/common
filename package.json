@@ -1,21 +1,46 @@
 {
     "name": "@kwiz/common",
-    "version": "1.0.265",
+    "version": "1.0.267",
     "description": "KWIZ common utilities and helpers for M365 platform",
     "main": "lib/cjs/index.js",
     "module": "lib/esm/index.js",
     "types": "lib/types/index.d.ts",
+    "sideEffects": [
+        "./lib/esm/config.js",
+        "./lib/cjs/config.js",
+        "./lib/esm/helpers/polyfill.js",
+        "./lib/cjs/helpers/polyfill.js",
+        "./lib/esm/utils/script.js",
+        "./lib/cjs/utils/script.js",
+        "./lib/esm/utils/sod.js",
+        "./lib/cjs/utils/sod.js"
+    ],
     "exports": {
         ".": {
             "types": "./lib/types/index.d.ts",
             "import": "./lib/esm/index.js",
             "require": "./lib/cjs/index.js"
         },
+        "./auth": {
+            "types": "./lib/types/auth.d.ts",
+            "import": "./lib/esm/auth.js",
+            "require": "./lib/cjs/auth.js"
+        },
+        "./crypto": {
+            "types": "./lib/types/crypto.d.ts",
+            "import": "./lib/esm/crypto.js",
+            "require": "./lib/cjs/crypto.js"
+        },
+        "./sharepoint-rest": {
+            "types": "./lib/types/sharepoint-rest.d.ts",
+            "import": "./lib/esm/sharepoint-rest.js",
+            "require": "./lib/cjs/sharepoint-rest.js"
+        },
         "./package.json": "./package.json"
     },
     "scripts": {
         "watch": "npm-run-all --parallel watch:esm watch:cjs watch:push-once",
-        "build": "npm run reindex-project && npm run build:esm && npm run build:cjs",
+        "build": "npm run build:esm && npm run build:cjs",
         "unit-test": "node --import tsx --test src",
         "npm-v-patch": "npm version patch && git push origin main:main && git push --tags",
         "npm-v-major": "npm version major && git push origin main:main && git push --tags",
@@ -27,8 +52,6 @@
         "test": "npm run build:cjs && npm run build:test && mocha",
         "___do_not_use_npm-publish": "npm publish --access public",
         "reset-repo": "git fetch origin && git reset --hard origin/main",
-        "reindex-project": "cti create ./src -i _dependencies -w -b -n -o exports-index.ts && node fix-folder-imports.js",
-        "remove-all-index-files": "cd src && del /s /f /q exports-index.ts",
         "watch:esm": "tsc-watch --project tsconfig.esm.json",
         "watch:cjs": "tsc-watch --project tsconfig.cjs.json",
         "watch-push": "yalc push --sig",
@@ -64,14 +87,13 @@
     "engines": {
         "node": ">=16"
     },
-    "packageManager": "npm@9.5.1",
+    "packageManager": "npm@9.8.1",
     "devDependencies": {
         "@azure/msal-node": "^3.5.3",
         "@types/dom-navigation": "^1.0.4",
         "@types/jsdom": "^21.1.7",
         "@types/mocha": "^10.0.10",
         "@types/node": "^24.1.0",
-        "create-ts-index": "^1.14.0",
         "dotenv": "^16.5.0",
         "fs-extra": "^11.2.0",
         "jsdom": "^26.1.0",

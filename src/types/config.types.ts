@@ -1,5 +1,5 @@
-import { ConsoleLogger } from "../utils/consolelogger";
-import { releasetypes } from "./common.types";
+import type { ConsoleLogger } from "../utils/consolelogger";
+import type { releasetypes } from "./common.types";
 
 export interface iConfigInfo {
     BuildNumber: string;
@@ -15,7 +15,7 @@ export interface iConfigParams {
     BuildNumber: string;
     ReleaseStatus: releasetypes;
     ProjectName: string;
-};
+}
 export interface iConfigResult {
     GetLogger: (name: string) => ConsoleLogger;
     /** @deprecated call GetLogger instead  */
