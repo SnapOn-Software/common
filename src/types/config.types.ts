@@ -15,6 +15,7 @@ export interface iConfigParams {
     BuildNumber: string;
     ReleaseStatus: releasetypes;
     ProjectName: string;
+    Debug?: boolean;
 }
 export interface iConfigResult {
     GetLogger: (name: string) => ConsoleLogger;
