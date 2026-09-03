@@ -1,3 +1,4 @@
+import { isBrowser } from "./runtime";
 import { trim } from "./strings";
 import { isNullOrEmptyString, isNumeric, isString } from "./typecheckers";
 
@@ -9,6 +10,8 @@ export function deleteCookie(cookieName: string, path?: string) {
 }
 
 export function getAllCookies(prefix?: string): string[] {
+    if (!isBrowser()) return [];
+
     let cookies = document.cookie.split(';');
     let names: string[] = [];
     for (var k = 0; k < cookies.length; k++) {
@@ -22,6 +25,8 @@ export function getAllCookies(prefix?: string): string[] {
 
 /** get a cookie's value by that name, or null */
 export function getCookie(cookieName: string) {
+    if (!isBrowser()) return null;
+
     try {
         let cookies = document.cookie.split(';');
         for (var k = 0; k < cookies.length; k++) {
@@ -35,6 +40,8 @@ export function getCookie(cookieName: string) {
 }
 /** set a cookie by that name and value. if you do not send expireDays, it will be a session cookie (in memory) */
 export function setCookie(name: string, value: string, expireDays?: number, path?: string) {
+    if (!isBrowser()) return;
+
     var cookie: string[] = [];
 
     var cookieValue = `${name}=${isString(value) ? value : ""}`;

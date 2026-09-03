@@ -1,5 +1,7 @@
+import { GetGlobalDebug } from './browser';
 import { CommonConfig } from './common-config';
 import { SetPolyfills } from './helpers/polyfill';
+import { isBoolean } from './helpers/typecheckers';
 import { iConfigInfo, iConfigParams, iConfigResult } from './types/config.types';
 import { ConsoleLogger } from './utils/consolelogger';
 
@@ -34,4 +36,7 @@ function SetDependencies(params: iConfigParams) {
 
     for (const key in newValue)//update configInfo
         currentConfig[key] = newValue[key];
+
+    if (isBoolean(params.Debug))
+        GetGlobalDebug().Debug.On();
 }
