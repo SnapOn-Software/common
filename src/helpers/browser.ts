@@ -1514,3 +1514,34 @@ export function normalizeHtmlTags(html: string): string {
         return `<${tagName}${attrs}></${tagName}>`;
     });
 }
+/** true if el has a non-empty rect that isn't clipped out by an overflow-hidden ancestor and intersects the viewport */
+export function isWithinViewport(el: HTMLElement, options?: {
+    /** return true for elements that have 0 width or height */
+    allowZeroSize?: boolean;
+}): boolean {
+    if (!el) return false;
+
+    let rect = el.getBoundingClientRect();
+    if ((rect.width === 0 || rect.height === 0) && options?.allowZeroSize !== true) return false;
+
+    let ancestor = el.parentElement;
+    while (ancestor) {
+        const style = getComputedStyle(ancestor);
+        if (style.overflow !== 'visible' || style.overflowX !== 'visible' || style.overflowY !== 'visible') {
+            const aRect = ancestor.getBoundingClientRect();
+            rect = {
+                ...rect,
+                top: Math.max(rect.top, aRect.top),
+                left: Math.max(rect.left, aRect.left),
+                bottom: Math.min(rect.bottom, aRect.bottom),
+                right: Math.min(rect.right, aRect.right),
+            };
+            if (rect.bottom <= rect.top || rect.right <= rect.left) return false;
+        }
+        ancestor = ancestor.parentElement;
+    }
+
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    return rect.bottom > 0 && rect.top < viewportHeight && rect.right > 0 && rect.left < viewportWidth;
+}
