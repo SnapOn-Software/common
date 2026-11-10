@@ -6,6 +6,7 @@ export * from './utils/sharepoint.rest/file.folder';
 export * from './utils/sharepoint.rest/item';
 export * from './utils/sharepoint.rest/list';
 export * from './utils/sharepoint.rest/listutils/GetListItemsByCaml';
+export { GetListItemsByRenderListDataAsStream } from './utils/sharepoint.rest/listutils/GetListItemsByRenderListDataAsStream';
 export * from './utils/sharepoint.rest/listutils/GetListItemsById';
 export * from './utils/sharepoint.rest/listutils/common';
 export * from './utils/sharepoint.rest/location';

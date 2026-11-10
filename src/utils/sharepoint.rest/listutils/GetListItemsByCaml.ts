@@ -26,12 +26,13 @@ interface ICamlOptions {
     /** set query to get items from this folder only */
     FolderServerRelativeUrl?: string;
     refreshCache?: boolean;
+    /** Throw a threshold error if the built-in retry cannot handle it. */
+    throwOnUnhandledThreshold?: boolean;
 }
 
 //Lookup threshold limit is 12 but we use a smaller number here to ensure there are no issues
 const lookupOrUserFieldLimit = 11;
-/** returns the items or NULL, never errors out since it is used in aggregator.
- *  set throwErrors = true if you want errors to be thrown instead of returning null.
+/** Returns items or null. Set throwOnUnhandledThreshold to propagate unhandled threshold errors.
  * camlQuery: one of:
  *  - view.ViewQuery
  *  - wrapped view.ViewQuery in a <View>: "&lt;View Scope='RecursiveAll'>&lt;Query>&lt;/Query>&lt;RowLimit>1000&lt;/RowLimit>&lt;/View>" or send rowLimit in options.
@@ -205,23 +206,12 @@ export async function GetListItemsByCaml(siteUrl: string, listIdOrTitle: string,
 
         return itemsResult;
     } catch (ex) {
-        console.log(`isThrottled: ${isThrottled}`);
+        if (options.throwOnUnhandledThreshold && __getSPRestErrorData(ex).code.includes("SPQueryThrottledException")) throw ex;
+        logger.error(ex);
     }
 
     return null;
 }
-
-// (window as any).runtTest = true;
-// window.setTimeout(() => {
-//     if ((window as any).runtTest == false) return;
-//     (window as any).runtTest = false;
-//     GetListItemsByCaml(null, "aec7756b-daa0-4da1-88ba-c66cb572e816", "", {
-//         columns: [],
-//         refreshCache: true
-//     }).then((r) => {
-
-//     });
-// }, 500);
 
 //ISSUE: 1565
 async function _processLookupThresholdCamlRequest(
@@ -749,7 +739,7 @@ async function processRequestResult(requestUrl: string, restUrlWithSelect: strin
             else
                 data = null;
         } catch (e) {
-            if (__getSPRestErrorData(e).code.indexOf('SPQueryThrottledException')) {
+            if (__getSPRestErrorData(e).code.includes('SPQueryThrottledException')) {
                 //test again - on awaiting score view, this will work but will ONLY return the order by fields...
                 // if (!triedWithoutViewFields) {
                 //     //Our own issues list had too many lookup fields.

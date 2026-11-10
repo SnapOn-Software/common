@@ -147,19 +147,23 @@ export function __isIRestError(e: any): e is IRestError {
 /** extract the error message from a SharePoint REST failed request */
 export function __getSPRestErrorData(restError: IRestError) {
     let code = "Unknown";
-    let errorMessage = "Unspecified error";
-    if (restError && restError.message) errorMessage = restError.message;
-    if (restError && restError.xhr && !isNullOrEmptyString(restError.xhr.responseText)) {
-        let errorData = jsonParse<{ error: { code: string; message: { value: string; }; }; }>(restError.xhr.responseText);
-        let error = errorData && errorData.error;
-        if (!error && errorData)//in minimal rest - error is in "odata.error"
-            error = errorData && errorData["odata.error"];
-
-        if (error) {
-            if (error && error.message && error.message.value)
-                errorMessage = error.message.value;
-            if (error && error.code)
-                code = error.code;
+    let errorMessage = restError && restError.message || "Unspecified error";
+    // Cached failures retain errorData but no longer have an XMLHttpRequest.
+    let data: unknown = restError && restError.errorData;
+    if (!data && restError && restError.xhr && !isNullOrEmptyString(restError.xhr.responseText)) {
+        data = jsonParse<unknown>(restError.xhr.responseText);
+    }
+    if (typeof data === "string") data = jsonParse<unknown>(data);
+    if (data && typeof data === "object") {
+        const envelope = data as Record<string, unknown>;
+        const error = envelope.error || envelope["odata.error"];
+        if (error && typeof error === "object") {
+            const details = error as Record<string, unknown>;
+            if (typeof details.code === "string") code = details.code;
+            if (details.message && typeof details.message === "object") {
+                const message = details.message as Record<string, unknown>;
+                if (typeof message.value === "string") errorMessage = message.value;
+            } else if (typeof details.message === "string") errorMessage = details.message;
         }
     }
     logger.error(errorMessage);
