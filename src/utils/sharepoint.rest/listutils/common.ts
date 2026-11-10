@@ -5,7 +5,9 @@ import { IDictionary } from "../../../types/common.types";
 import { jsonTypes } from "../../../types/rest.types";
 import { FileSystemObjectTypes, IFieldInfoEX, IFieldLookupInfo } from "../../../types/sharepoint.types";
 import { GeListItemsFoldersBehaviour, IRestItem } from "../../../types/sharepoint.utils.types";
-import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues } from "../common";
+import { DecodeFieldValuesAsTextKey, GetFieldNameFromRawValues, GetSiteUrl } from "../common";
+import { GetJson } from "../../rest";
+import { GetListRestUrl } from "../list";
 import { GetItemsByIdSync } from "./GetListItemsById";
 
 const logger = new CommonLogger("utils/sharepoint.rest/listutils/common");
@@ -222,4 +224,107 @@ export function SPVersionToVersionId(version: string | number) {
     }
     catch (e) { }
     return null;
+}
+
+interface IRenderedViewOptions {
+    refreshCache?: boolean;
+    columns: string[];
+    idsOnly?: boolean;
+    /** Maximum items to return. Omit or use 0 to retrieve all pages. */
+    rowLimit?: number;
+    FolderServerRelativeUrl?: string;
+}
+
+interface IRenderedPage {
+    Row: Record<string, unknown>[];
+    NextHref?: string;
+    ListData?: IRenderedPage;
+}
+
+/** Retrieve raw view rows with RenderListDataAsStream. */
+export async function _getRenderedRows(siteUrl: string, listIdOrTitle: string, camlQuery: string, options: IRenderedViewOptions): Promise<Record<string, unknown>[]> {
+    siteUrl = GetSiteUrl(siteUrl);
+
+    if (!options || !Array.isArray(options.columns)) throw new Error("columns are required.");
+
+    const wrapped = /^\s*<view\b/i.test(camlQuery) ? camlQuery : `<View Scope="RecursiveAll"><Query>${camlQuery || ""}</Query></View>`;
+    const xml = new DOMParser().parseFromString(wrapped, "text/xml");
+    const view = xml.documentElement;
+
+    if (view.nodeName.toLowerCase() !== "view" || xml.querySelector("parsererror")) throw new Error("Invalid CAML view.");
+
+    Array.from(view.children).filter(node => ["viewfields", "rowlimit"].includes(node.nodeName.toLowerCase())).forEach(node => view.removeChild(node));
+
+    const viewFields = xml.createElement("ViewFields");
+    Array.from(new Set(options.idsOnly ? ["ID"] : ["ID", "Title", "FileRef", ...options.columns])).forEach(name => {
+        const ref = xml.createElement("FieldRef");
+        ref.setAttribute("Name", name);
+        viewFields.appendChild(ref);
+    });
+    view.appendChild(viewFields);
+
+    const rowLimit = xml.createElement("RowLimit");
+    rowLimit.setAttribute("Paged", "TRUE");
+    const maxItems = options.rowLimit;
+    const pageSize = maxItems > 0 ? Math.min(maxItems, 5000) : 5000;
+    rowLimit.textContent = String(pageSize);
+    view.appendChild(rowLimit);
+
+    const viewXml = new XMLSerializer().serializeToString(view);
+    const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/RenderListDataAsStream`;
+    const rows: Record<string, unknown>[] = [];
+    const seenIds = new Set<number>();
+    const seenTokens = new Set<string>();
+    let paging: string;
+    let pageNumber = 0;
+
+    do {
+        pageNumber++;
+        const parameters: { ViewXml: string; RenderOptions: number; FolderServerRelativeUrl?: string } = {
+            ViewXml: viewXml,
+            RenderOptions: 2 // ListData
+        };
+
+        if (options.FolderServerRelativeUrl) parameters.FolderServerRelativeUrl = options.FolderServerRelativeUrl;
+
+        const pageStarted = Date.now();
+        const response = await GetJson<IRenderedPage>(
+            paging ? `${url}?${paging}` : url,
+            JSON.stringify({ parameters }),
+            {
+                allowCache: options.refreshCache !== true,
+                postCacheKey: JSON.stringify(parameters),
+                jsonMetadata: jsonTypes.nometadata,
+                spWebUrl: siteUrl
+            }
+        );
+        const page = response?.ListData || response;
+
+        if (!page || !Array.isArray(page.Row)) throw new Error("Invalid RenderListDataAsStream response.");
+
+        logger.debug(`_getRenderedRows -> Page ${pageNumber} returned ${page.Row.length} rows in ${Date.now() - pageStarted} ms (paging: ${paging ? "continuation" : "first page"}; first ID: ${page.Row[0]?.ID}; last ID: ${page.Row[page.Row.length - 1]?.ID}).`);
+
+        for (let index = 0; index < page.Row.length; index++) {
+            const row = page.Row[index];
+            const id = Number(row.ID);
+
+            if (!Number.isSafeInteger(id) || id < 1) throw new Error("Rendered view returned an invalid item ID.");
+
+            if (seenIds.has(id)) {
+                if (index === 0 && Number(rows[rows.length - 1]?.ID) === id) continue;
+                throw new Error(`Rendered view returned duplicate ID ${id}.`);
+            }
+
+            rows.push(row);
+            seenIds.add(id);
+
+            if (options.rowLimit > 0 && rows.length >= options.rowLimit) break;
+        }
+
+        paging = options.rowLimit > 0 && rows.length >= options.rowLimit ? null : page.NextHref?.replace(/&amp;/g, "&").replace(/^\?/, "");
+        if (paging && seenTokens.has(paging)) throw new Error("RenderListDataAsStream returned a repeated paging token.");
+        if (paging) seenTokens.add(paging);
+    } while (paging);
+
+    return rows;
 }

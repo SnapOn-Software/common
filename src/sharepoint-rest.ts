@@ -8,7 +8,7 @@ export * from './utils/sharepoint.rest/list';
 export * from './utils/sharepoint.rest/listutils/GetListItemsByCaml';
 export { GetListItemsByRenderListDataAsStream } from './utils/sharepoint.rest/listutils/GetListItemsByRenderListDataAsStream';
 export * from './utils/sharepoint.rest/listutils/GetListItemsById';
-export * from './utils/sharepoint.rest/listutils/common';
+export { SkipFields, SPVersionToVersionId } from './utils/sharepoint.rest/listutils/common';
 export * from './utils/sharepoint.rest/location';
 export * from './utils/sharepoint.rest/navigation-links';
 export * from './utils/sharepoint.rest/sp-people-search-service';

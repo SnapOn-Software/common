@@ -1,9 +1,8 @@
-import { CommonConfig } from "../../../common-config";
 import { CommonLogger } from "../../../common-logger";
 import { HTMLDecode } from "../../../helpers/browser";
-import { chunkArray, firstIndexOf, firstOrNull, makeUniqueArray, toHash } from "../../../helpers/collections.base";
+import { chunkArray, makeUniqueArray, toHash } from "../../../helpers/collections.base";
 import { promiseNParallel } from "../../../helpers/promises";
-import { EnsureViewFields, GetOrderByFromCaml, RemoveOrderByFromCaml, getFieldOutputType } from "../../../helpers/sharepoint";
+import { EnsureViewFields, GetOrderByFromCaml, getFieldOutputType } from "../../../helpers/sharepoint";
 import { isDate, isNotEmptyArray, isNullOrEmptyArray, isNullOrEmptyString, isNullOrNaN, isNullOrUndefined, isNumeric } from "../../../helpers/typecheckers";
 import { encodeURIComponentEX } from "../../../helpers/url";
 import { IDictionary } from "../../../types/common.types";
@@ -15,7 +14,7 @@ import { EncodeFieldValuesAsTextKey, GetFieldNameFromRawValues, GetSiteUrl, __ge
 import { GetListFields, GetListRestUrl } from "../list";
 import { SPServerLocalTimeToUTCSync } from "../web";
 import { GetItemsById } from "./GetListItemsById";
-import { SkipFields, __fixGetListItemsResults } from "./common";
+import { SkipFields, __fixGetListItemsResults, _getRenderedRows } from "./common";
 
 interface IRenderedItemsOptions {
     columns: string[];
@@ -38,7 +37,8 @@ const lookupOrUserFieldLimit = 11;
  *
  * Lookup/person columns may require multiple rendered requests. Append-only notes
  * and RelatedItems need additional CAML requests because rendered rows expose only
- * display text for those fields. Those requests can also fail or be throttled.
+ * display text for those fields. Geolocation also needs CAML to preserve altitude
+ * and measure, which are not present in the rendered point. Those requests can also fail or be throttled.
  * The requested row limit is respected; otherwise retrieval is capped at 99,999.
  * Task hierarchy views may include parent items that GetItems does not return.
  */
@@ -74,8 +74,6 @@ export async function GetListItemsByRenderListDataAsStream(siteUrl: string, list
     let batchSize = options.rowLimit > 0 && options.rowLimit < maxBatchSize ? options.rowLimit : maxBatchSize;
     let totalNumberOfItemsToGet = getAllItems ? totalItemsInList : options.rowLimit > maxBatchSize ? options.rowLimit : batchSize;
 
-    let requestUrl = `${GetListRestUrl(siteUrl, listIdOrTitle)}/GetItems?$expand=FieldValuesAsText`;
-
     let allListFieldsHash = toHash(await GetListFields(siteUrl, listIdOrTitle), f => f.InternalName);
 
     let orderByStatement = GetOrderByFromCaml(camlQuery);
@@ -103,7 +101,7 @@ export async function GetListItemsByRenderListDataAsStream(siteUrl: string, list
     let requiresLookupBatching = lookupOrUserFieldsInColumns.length >= lookupOrUserFieldLimit;
 
     try {
-        const { items, needContentTypes, postProcessOrderBy } = await _getItemsByRenderedView(siteUrl, listIdOrTitle, camlQuery, options, totalNumberOfItemsToGet, allListFieldsHash, requiresLookupBatching, orderByStatement);
+        const { items, needContentTypes } = await _getItemsByRenderedView(siteUrl, listIdOrTitle, camlQuery, options, totalNumberOfItemsToGet, allListFieldsHash, requiresLookupBatching, orderByStatement);
 
         let itemsResult = __fixGetListItemsResults(siteUrl, listIdOrTitle, items, options.foldersBehaviour);
 
@@ -136,49 +134,6 @@ export async function GetListItemsByRenderListDataAsStream(siteUrl: string, list
             logger.timeEnd("Getting content types");
         }
 
-        if (postProcessOrderBy) {
-            //re-apply sort
-            if (CommonConfig.i.IsLocalDev) {
-                logger.table(itemsResult.map(i => {
-                    let row = {
-                        Id: i.Id,
-                        Title: i.Title
-                    };
-                    orderByStatement.forEach(s => { row[`${s.Name} ${s.IsAscending ? 'asc' : 'desc'}`] = i[s.Name]; });
-                    return row;
-                }), "before sort", true);
-            }
-            itemsResult.sort((a, b) => {
-                for (let i = 0; i < orderByStatement.length; i++) {
-                    let ob = orderByStatement[i];
-                    let v1 = a[ob.Name];
-                    let v2 = b[ob.Name];
-                    if (v1 === v2) {
-                        //these are equal - continue to second sort statement
-                    }
-                    else {
-                        if (ob.IsAscending)
-                            return (v1 > v2) ? 1 : -1;
-                        else
-                            return (v2 > v1) ? 1 : -1;
-                    }
-                }
-                return 0;
-            });
-
-            if (CommonConfig.i.IsLocalDev) {
-                logger.table(itemsResult.map(i => {
-                    let row = {
-                        Id: i.Id,
-                        Title: i.Title
-                    };
-                    orderByStatement.forEach(s => { row[`${s.Name} ${s.IsAscending ? 'asc' : 'desc'}`] = i[s.Name]; });
-                    return row;
-                }), "after sort", true);
-            }
-
-        }
-
         return itemsResult;
     } catch (ex) {
         if (options.throwOnUnhandledThreshold && __getSPRestErrorData(ex).code.includes("SPQueryThrottledException")) throw ex;
@@ -190,7 +145,6 @@ export async function GetListItemsByRenderListDataAsStream(siteUrl: string, list
 
 interface ICamlRequestResult {
     items: IRestItem[];
-    postProcessOrderBy: boolean;
     needContentTypes: boolean;
 }
 
@@ -277,7 +231,14 @@ function _mapRenderedRowToRestItem(row: Record<string, unknown>, fields: IFieldI
             item[key] = multiple ? (value === "" || value === null ? null : ids) : (ids[0] ?? null);
             item.FieldValuesAsText[textKey] = references.map(ref => type.startsWith("User") ? ref.title : ref.lookupValue).join("; ");
         } else if (["Number", "Currency", "Integer", "Counter"].includes(type)) {
-            const raw = row[`${name}.`];
+            let raw = row[`${name}.`];
+
+            // Calendar integers such as EventType and Duration have no trailing-dot raw value.
+            if (raw === undefined && (type === "Integer" || type === "Counter") &&
+                (typeof value === "number" || (typeof value === "string" && /^-?\d+$/.test(value)))) {
+                raw = value;
+            }
+
             if (raw !== "" && raw !== null && raw !== undefined && !Number.isFinite(Number(raw))) throw new Error(`Invalid rendered number in field ${name}.`);
             if (raw === undefined && value !== "" && value !== null) throw new Error(`Rendered number field ${name} has no raw value.`);
             item[key] = raw === "" || raw === null || raw === undefined ? null : Number(raw);
@@ -285,11 +246,20 @@ function _mapRenderedRowToRestItem(row: Record<string, unknown>, fields: IFieldI
             const raw = row[`${name}.`];
             if (raw === undefined && value !== "" && value !== null) throw new Error(`Rendered date field ${name} has no UTC value.`);
             item[key] = raw === "" || raw === null || raw === undefined ? null : raw;
-        } else if (type === "Boolean" || type === "Attachments") {
-            const raw = type === "Attachments" ? value : row[`${name}.value`];
+        } else if (["Boolean", "Attachments", "AllDayEvent", "Recurrence"].includes(type)) {
+            // Recurrence is rendered directly as 0/1; AllDayEvent uses the Boolean .value property.
+            const raw = type === "Attachments" || type === "Recurrence" ? value : row[`${name}.value`];
             if (raw !== "" && raw !== null && raw !== undefined && !["0", "1", 0, 1, false, true].includes(raw as string | number | boolean)) throw new Error(`Invalid rendered boolean in field ${name}.`);
             item[key] = raw === "" || raw === null || raw === undefined ? null : raw === "1" || raw === 1 || raw === true;
             item.FieldValuesAsText[textKey] = type === "Attachments" ? (item[key] ? "True" : "False") : String(value ?? "");
+        } else if (String(type) === "Thumbnail") {
+            if (value === "" || value === null) {
+                item[key] = null;
+            } else {
+                if (typeof value !== "object" || Array.isArray(value)) throw new Error(`Invalid rendered thumbnail field ${name}.`);
+                // Rendering adds null metadata properties that are absent from the stored JSON.
+                item[key] = JSON.stringify(Object.fromEntries(Object.entries(value).filter(([, property]) => property !== null)));
+            }
         } else if (type === "URL") {
             item[key] = value === "" || value === null ? null : { Url: value, Description: row[`${name}.desc`] || "" };
         } else if (type === "TaxonomyFieldType") {
@@ -338,10 +308,11 @@ async function _getItemsByRenderedView(
 
     // Rendered append-only notes contain a "View Entries" link, while RelatedItems
     // contains a count such as "2 related items". Neither contains the REST value.
-    // Exclude both here and fetch their actual values together after mapping rows.
+    // Rendered geolocation points omit altitude and measure. Fetch these fields
+    // together through CAML so the complete REST values are preserved.
     const detailFields = options.columns.map(name => fields[name]).filter(field => field &&
         ((field.TypeAsString === "Note" && /\bAppendOnly\s*=\s*["\x27]TRUE["\x27]/i.test(field.SchemaXml || "")) ||
-            String(field.TypeAsString) === "RelatedItems"));
+            ["RelatedItems", "Geolocation"].includes(String(field.TypeAsString))));
     const detailFieldNames = new Set(detailFields.map(field => field.InternalName));
     const batches = requiresLookupBatching ? _getLookupFieldBatches(orderBy, fields, options.columns) : [options.columns];
     let items: IRestItem[] = null;
@@ -392,15 +363,14 @@ async function _getItemsByRenderedView(
 
     return {
         items,
-        postProcessOrderBy: false,
         needContentTypes: options.columns.some(name => /^contenttype(id)?$/i.test(name))
     };
 }
 
 /**
- * Fetch append-only notes and RelatedItems together using the IDs already returned
+ * Fetch append-only notes, RelatedItems and Geolocation using the IDs already returned
  * by the rendered view, then merge their REST values into the mapped items. The
- * ID-based CAML requests are batched to 500 IDs and run with limited concurrency.
+ * ID-based CAML requests are batched to 499 IDs and run with limited concurrency.
  * A missing item/field or a failed request is an error: returning rendered display
  * text in place of the underlying value would break the REST item contract.
  */
@@ -409,7 +379,8 @@ async function _getDetailedFieldValues(
     fields: IDictionary<IFieldInfoEX>, options: IRenderedItemsOptions
 ): Promise<void> {
     const started = Date.now();
-    const batches = chunkArray(items.map(item => item.Id), 500);
+    // Stay below 500 values per CAML In clause; batches above 500 failed in SharePoint testing.
+    const batches = chunkArray(items.map(item => item.Id), 499);
     const columns = ["ID", ...detailFields.map(field => field.InternalName)];
     const requestUrl = `${GetListRestUrl(siteUrl, listIdOrTitle)}/GetItems?$expand=FieldValuesAsText`;
 
@@ -802,104 +773,3 @@ async function processRequestResult(requestUrl: string, restUrlWithSelect: strin
     return { items: items, postProcessOrderBy: postProcessOrderBy };
 }
 
-interface IRenderedViewOptions {
-    refreshCache?: boolean;
-    columns: string[];
-    /** Maximum items to return. Omit or use 0 to retrieve all pages. */
-    rowLimit?: number;
-    FolderServerRelativeUrl?: string;
-}
-
-interface IRenderedPage {
-    Row: Record<string, unknown>[];
-    NextHref?: string;
-    ListData?: IRenderedPage;
-}
-
-/** Retrieve raw view rows with RenderListDataAsStream. */
-async function _getRenderedRows(siteUrl: string, listIdOrTitle: string, camlQuery: string, options: IRenderedViewOptions): Promise<Record<string, unknown>[]> {
-    siteUrl = GetSiteUrl(siteUrl);
-
-    if (!options || !Array.isArray(options.columns)) throw new Error("columns are required.");
-
-    const wrapped = /^\s*<view\b/i.test(camlQuery) ? camlQuery : `<View Scope="RecursiveAll"><Query>${camlQuery || ""}</Query></View>`;
-    const xml = new DOMParser().parseFromString(wrapped, "text/xml");
-    const view = xml.documentElement;
-
-    if (view.nodeName.toLowerCase() !== "view" || xml.querySelector("parsererror")) throw new Error("Invalid CAML view.");
-
-    Array.from(view.children).filter(node => ["viewfields", "rowlimit"].includes(node.nodeName.toLowerCase())).forEach(node => view.removeChild(node));
-
-    const viewFields = xml.createElement("ViewFields");
-    Array.from(new Set(["ID", "Title", "FileRef", ...options.columns])).forEach(name => {
-        const ref = xml.createElement("FieldRef");
-        ref.setAttribute("Name", name);
-        viewFields.appendChild(ref);
-    });
-    view.appendChild(viewFields);
-
-    const rowLimit = xml.createElement("RowLimit");
-    rowLimit.setAttribute("Paged", "TRUE");
-    const maxItems = options.rowLimit;
-    const pageSize = maxItems > 0 ? Math.min(maxItems, 5000) : 5000;
-    rowLimit.textContent = String(pageSize);
-    view.appendChild(rowLimit);
-
-    const viewXml = new XMLSerializer().serializeToString(view);
-    const url = `${GetListRestUrl(siteUrl, listIdOrTitle)}/RenderListDataAsStream`;
-    const rows: Record<string, unknown>[] = [];
-    const seenIds = new Set<number>();
-    const seenTokens = new Set<string>();
-    let paging: string;
-    let pageNumber = 0;
-
-    do {
-        pageNumber++;
-        const parameters: { ViewXml: string; RenderOptions: number; FolderServerRelativeUrl?: string } = {
-            ViewXml: viewXml,
-            RenderOptions: 2 // ListData
-        };
-
-        if (options.FolderServerRelativeUrl) parameters.FolderServerRelativeUrl = options.FolderServerRelativeUrl;
-
-        const pageStarted = Date.now();
-        const response = await GetJson<IRenderedPage>(
-            paging ? `${url}?${paging}` : url,
-            JSON.stringify({ parameters }),
-            {
-                allowCache: options.refreshCache !== true,
-                postCacheKey: JSON.stringify(parameters),
-                jsonMetadata: jsonTypes.nometadata,
-                spWebUrl: siteUrl
-            }
-        );
-        const page = response?.ListData || response;
-
-        if (!page || !Array.isArray(page.Row)) throw new Error("Invalid RenderListDataAsStream response.");
-
-        logger.debug(`_getRenderedRows -> Page ${pageNumber} returned ${page.Row.length} rows in ${Date.now() - pageStarted} ms (paging: ${paging ? "continuation" : "first page"}; first ID: ${page.Row[0]?.ID}; last ID: ${page.Row[page.Row.length - 1]?.ID}).`);
-
-        for (let index = 0; index < page.Row.length; index++) {
-            const row = page.Row[index];
-            const id = Number(row.ID);
-
-            if (!Number.isSafeInteger(id) || id < 1) throw new Error("Rendered view returned an invalid item ID.");
-
-            if (seenIds.has(id)) {
-                if (index === 0 && Number(rows[rows.length - 1]?.ID) === id) continue;
-                throw new Error(`Rendered view returned duplicate ID ${id}.`);
-            }
-
-            rows.push(row);
-            seenIds.add(id);
-
-            if (options.rowLimit > 0 && rows.length >= options.rowLimit) break;
-        }
-
-        paging = options.rowLimit > 0 && rows.length >= options.rowLimit ? null : page.NextHref?.replace(/&amp;/g, "&").replace(/^\?/, "");
-        if (paging && seenTokens.has(paging)) throw new Error("RenderListDataAsStream returned a repeated paging token.");
-        if (paging) seenTokens.add(paging);
-    } while (paging);
-
-    return rows;
-}
